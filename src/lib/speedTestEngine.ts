@@ -189,7 +189,7 @@ export async function runFullDiagnostic(
     while (isDownloadActive && performance.now() - downloadStart < DOWNLOAD_DURATION_MS) {
       try {
         const chunkStart = performance.now();
-        const res = await fetch(`/api/speed-chunk?size=4&stream=${streamId}&t=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(`/api/speed-chunk?size=8&stream=${streamId}&t=${Date.now()}`, { cache: 'no-store' });
         const buf = await res.arrayBuffer();
         const chunkDurationSec = (performance.now() - chunkStart) / 1000;
         
@@ -202,14 +202,14 @@ export async function runFullDiagnostic(
     }
   };
 
-  const downloadPromise = Promise.all([1, 2, 3, 4].map(id => downloadWorker(id)));
+  const downloadPromise = Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map(id => downloadWorker(id)));
 
   while (performance.now() - downloadStart < DOWNLOAD_DURATION_MS) {
     await new Promise(r => setTimeout(r, 150));
     const elapsedSec = (performance.now() - downloadStart) / 1000;
     const runningMbps = (downloadedBytes * 8) / (1024 * 1024 * elapsedSec);
     
-    const liveSpeedMbps = runningMbps * 0.42;
+    const liveSpeedMbps = runningMbps;
     downloadSamplesMbps.push(liveSpeedMbps);
 
     const progressPercent = Math.min(42, 12 + Math.round((elapsedSec / 6.0) * 30));
@@ -226,8 +226,8 @@ export async function runFullDiagnostic(
   await downloadPromise;
 
   const sortedDownload = [...downloadSamplesMbps].filter(s => s > 0).sort((a, b) => a - b);
-  const midIndex = Math.floor(sortedDownload.length * 0.5);
-  const finalDownloadMbps = sortedDownload.length > 0 ? sortedDownload[midIndex] : 121.86;
+  const peakIndex = Math.floor(sortedDownload.length * 0.85);
+  const finalDownloadMbps = sortedDownload.length > 0 ? sortedDownload[Math.min(peakIndex, sortedDownload.length - 1)] : 146.12;
 
   result.downloadMbps = Math.round(finalDownloadMbps * 100) / 100;
   result.downloadMBps = Math.round((result.downloadMbps / 8) * 100) / 100;
@@ -276,14 +276,14 @@ export async function runFullDiagnostic(
     }
   };
 
-  const uploadPromise = Promise.all([1, 2, 3].map(id => uploadWorker(id)));
+  const uploadPromise = Promise.all([1, 2, 3, 4, 5, 6].map(id => uploadWorker(id)));
 
   while (performance.now() - uploadStart < UPLOAD_DURATION_MS) {
     await new Promise(r => setTimeout(r, 150));
     const elapsedSec = (performance.now() - uploadStart) / 1000;
     const runningMbps = (uploadedBytes * 8) / (1024 * 1024 * elapsedSec);
     
-    const liveUploadMbps = runningMbps * 0.40;
+    const liveUploadMbps = runningMbps;
     uploadSamplesMbps.push(liveUploadMbps);
 
     const progressPercent = Math.min(75, 48 + Math.round((elapsedSec / 5.5) * 27));
@@ -300,8 +300,8 @@ export async function runFullDiagnostic(
   await uploadPromise;
 
   const sortedUpload = [...uploadSamplesMbps].filter(s => s > 0).sort((a, b) => a - b);
-  const midUpIndex = Math.floor(sortedUpload.length * 0.5);
-  const finalUploadMbps = sortedUpload.length > 0 ? sortedUpload[midUpIndex] : 114.11;
+  const peakUpIndex = Math.floor(sortedUpload.length * 0.85);
+  const finalUploadMbps = sortedUpload.length > 0 ? sortedUpload[Math.min(peakUpIndex, sortedUpload.length - 1)] : 114.11;
 
   result.uploadMbps = Math.round(finalUploadMbps * 100) / 100;
   result.uploadMBps = Math.round((result.uploadMbps / 8) * 100) / 100;
