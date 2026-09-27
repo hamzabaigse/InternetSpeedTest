@@ -19,14 +19,13 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [gaugeValue, setGaugeValue] = useState(0);
   
-  const [smoothedDownload, setSmoothedDownload] = useState<number | undefined>(undefined);
-  const [smoothedUpload, setSmoothedUpload] = useState<number | undefined>(undefined);
+  const [smoothedDownloadMBps, setSmoothedDownloadMBps] = useState<number | undefined>(undefined);
+  const [smoothedUploadMBps, setSmoothedUploadMBps] = useState<number | undefined>(undefined);
   const [idlePing, setIdlePing] = useState<number | undefined>(undefined);
   const [downloadLoadedPing, setDownloadLoadedPing] = useState<number | undefined>(undefined);
   const [uploadLoadedPing, setUploadLoadedPing] = useState<number | undefined>(undefined);
   
-  const [gaugeUnit, setGaugeUnit] = useState<'Mbps' | 'ms' | 'Score'>('Mbps');
-  const [unitMode, setUnitMode] = useState<'Mbps' | 'MBps'>('Mbps');
+  const [gaugeUnit, setGaugeUnit] = useState<'MB/s' | 'ms' | 'Score'>('MB/s');
   const [consoleLog, setConsoleLog] = useState<string[]>([]);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [tabRefreshCounter, setTabRefreshCounter] = useState(0);
@@ -44,8 +43,8 @@ export default function Home() {
     setConsoleLog([]);
     setProgress(0);
     setGaugeValue(0);
-    setSmoothedDownload(undefined);
-    setSmoothedUpload(undefined);
+    setSmoothedDownloadMBps(undefined);
+    setSmoothedUploadMBps(undefined);
     setIdlePing(undefined);
     setDownloadLoadedPing(undefined);
     setUploadLoadedPing(undefined);
@@ -56,8 +55,8 @@ export default function Home() {
         setProgress(data.stagePercent);
         setGaugeValue(data.gaugeValue);
         
-        if (data.downloadMbps !== undefined) setSmoothedDownload(data.downloadMbps);
-        if (data.uploadMbps !== undefined) setSmoothedUpload(data.uploadMbps);
+        if (data.downloadMBps !== undefined) setSmoothedDownloadMBps(data.downloadMBps);
+        if (data.uploadMBps !== undefined) setSmoothedUploadMBps(data.uploadMBps);
         if (data.idlePingMs !== undefined) setIdlePing(data.idlePingMs);
         if (data.downloadLoadedPingMs !== undefined) setDownloadLoadedPing(data.downloadLoadedPingMs);
         if (data.uploadLoadedPingMs !== undefined) setUploadLoadedPing(data.uploadLoadedPingMs);
@@ -99,36 +98,11 @@ export default function Home() {
             Comprehensive 40-Second Network Intelligence Test
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto mt-2">
-            Measures real-time download/upload throughput, YouTube 4K CDN buffer rate, bufferbloat latency spikes, and game datacenters.
+            Measures real-time download &amp; upload throughput in Megabytes per second (MB/s), YouTube 4K CDN buffer rate, and game datacenters.
           </p>
 
-          {/* Unit Toggle Switch */}
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-              <Info className="w-3.5 h-3.5 text-cyan-400" /> Display Unit:
-            </span>
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-1 flex gap-1">
-              <button
-                onClick={() => setUnitMode('Mbps')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition ${
-                  unitMode === 'Mbps'
-                    ? 'bg-cyan-500 text-slate-950 shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Mbps (Megabits/s - ISP Standard)
-              </button>
-              <button
-                onClick={() => setUnitMode('MBps')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition ${
-                  unitMode === 'MBps'
-                    ? 'bg-cyan-500 text-slate-950 shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                MB/s (Megabytes/s - File Download)
-              </button>
-            </div>
+          <div className="inline-flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg text-xs font-bold text-cyan-400 mt-3">
+            <Info className="w-3.5 h-3.5" /> Unit: Megabytes per second (MB/s)
           </div>
         </div>
 
@@ -140,10 +114,10 @@ export default function Home() {
                 <Activity className="w-48 h-48 text-cyan-400" />
               </div>
 
-              {/* Ookla-Inspired Top Header HUD (Sequential Live Lock) */}
+              {/* Ookla-Inspired Top Header HUD (Download MB/s, Upload MB/s, Ping) */}
               <OoklaHeaderHud
-                downloadMbps={result?.downloadMbps ?? smoothedDownload}
-                uploadMbps={result?.uploadMbps ?? smoothedUpload}
+                downloadMBps={result?.downloadMBps ?? smoothedDownloadMBps}
+                uploadMBps={result?.uploadMBps ?? smoothedUploadMBps}
                 idlePingMs={result?.idlePingMs ?? idlePing}
                 downloadLoadedPingMs={result?.downloadLoadedPingMs ?? downloadLoadedPing}
                 uploadLoadedPingMs={result?.uploadLoadedPingMs ?? uploadLoadedPing}
@@ -153,12 +127,11 @@ export default function Home() {
                 liveGaugeVal={gaugeValue}
               />
 
-              {/* Clean & Minimal Meter Dial with Speed Below */}
+              {/* Clean Meter Dial with Speed Readout in MB/s Below */}
               <div className="flex flex-col items-center justify-center">
                 <SpeedometerCanvas
                   value={gaugeValue}
                   unit={gaugeUnit}
-                  displayMode={unitMode}
                   isTesting={isTesting}
                   activePhase={getActivePhase()}
                   stageName={

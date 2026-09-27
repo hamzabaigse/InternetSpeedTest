@@ -16,7 +16,7 @@ export function generateIspComplaintPdf(
   const reportId = `NET-DIAG-${Math.floor(100000 + Math.random() * 900000)}`;
 
   // Header Banner
-  doc.setFillColor(15, 23, 42); // Dark navy
+  doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, 210, 38, 'F');
 
   doc.setTextColor(255, 255, 255);
@@ -45,10 +45,10 @@ export function generateIspComplaintPdf(
   doc.text(`Work From Home Composite Grade: ${result.wfhGrade}`, 14, 68);
   doc.text(`Throttling Risk Verdict: ${result.isThrottlingLikely ? 'HIGH TRAFFIC SHAPING DETECTED' : 'Normal Stream Parity'}`, 14, 74);
 
-  // Section 2: Key Measurement Breakdown Table
+  // Section 2: Key Measurement Breakdown Table in MB/s
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('2. Measured Metrics & Contractual Deviation', 14, 86);
+  doc.text('2. Measured Metrics & Contractual Deviation (MB/s)', 14, 86);
 
   // Table Headers
   doc.setFillColor(241, 245, 249);
@@ -62,12 +62,12 @@ export function generateIspComplaintPdf(
 
   // Rows
   const rows = [
-    { label: 'Multi-stream Download Speed', val: `${result.downloadMbps} Mbps`, bench: '> 100 Mbps', status: result.downloadMbps > 50 ? 'PASS' : 'FAIL' },
-    { label: 'Single-stream Download Speed', val: `${result.singleStreamMbps} Mbps`, bench: '>= Multi-stream', status: result.isThrottlingLikely ? 'THROTTLED' : 'PASS' },
-    { label: 'Upload Bandwidth Capacity', val: `${result.uploadMbps} Mbps`, bench: '> 15 Mbps', status: result.uploadMbps > 10 ? 'PASS' : 'WARN' },
+    { label: 'Multi-stream Download Speed', val: `${result.downloadMBps} MB/s`, bench: '> 12.5 MB/s', status: result.downloadMBps > 6 ? 'PASS' : 'FAIL' },
+    { label: 'Single-stream Download Speed', val: `${result.singleStreamMBps} MB/s`, bench: '>= Multi-stream', status: result.isThrottlingLikely ? 'THROTTLED' : 'PASS' },
+    { label: 'Upload Bandwidth Capacity', val: `${result.uploadMBps} MB/s`, bench: '> 2.0 MB/s', status: result.uploadMBps > 1.5 ? 'PASS' : 'WARN' },
     { label: 'Idle Latency (Ping)', val: `${result.idlePingMs} ms`, bench: '< 30 ms', status: result.idlePingMs < 40 ? 'PASS' : 'WARN' },
     { label: 'Bufferbloat Latency Spike (+Delta)', val: `+${result.bufferbloatDeltaMs} ms (${result.bufferbloatGrade})`, bench: '< 25 ms', status: result.bufferbloatGrade === 'D' || result.bufferbloatGrade === 'F' ? 'FAIL' : 'PASS' },
-    { label: 'YouTube CDN Delivery Rate', val: `${result.youtubeCdnSpeedMbps} Mbps (${result.youtube4kBufferRatio}x)`, bench: '> 25 Mbps (4K)', status: result.youtube4kBufferRatio >= 1.0 ? 'PASS' : 'WARN' },
+    { label: 'YouTube CDN Delivery Rate', val: `${result.youtubeCdnSpeedMBps} MB/s (${result.youtube4kBufferRatio}x)`, bench: '> 3.1 MB/s (4K)', status: result.youtube4kBufferRatio >= 1.0 ? 'PASS' : 'WARN' },
     { label: 'VoIP Audio Jitter Variance', val: `${result.jitterMs} ms (${result.packetDropProbabilityPercent}% Drop)`, bench: '< 10 ms', status: result.jitterMs < 15 ? 'PASS' : 'WARN' },
   ];
 
@@ -91,7 +91,7 @@ export function generateIspComplaintPdf(
     y += 8;
   });
 
-  // Section 3: Diagnostic Findings & Formal Complaint Text
+  // Section 3: Diagnostic Findings Analysis
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
@@ -102,17 +102,17 @@ export function generateIspComplaintPdf(
   
   let explanation = '';
   if (result.isThrottlingLikely) {
-    explanation = `Analysis reveals a severe discrepancy between multi-stream downloads (${result.downloadMbps} Mbps) and single-stream downloads (${result.singleStreamMbps} Mbps), generating a Throttling Ratio of ${result.throttlingRatio}x. This strongly indicates artificial bandwidth shaping or congested peering routes on specific ports/protocols by ${ispName}.`;
+    explanation = `Analysis reveals a severe discrepancy between multi-stream downloads (${result.downloadMBps} MB/s) and single-stream downloads (${result.singleStreamMBps} MB/s), generating a Throttling Ratio of ${result.throttlingRatio}x. This indicates bandwidth shaping by ${ispName}.`;
   } else if (result.bufferbloatGrade === 'D' || result.bufferbloatGrade === 'F') {
-    explanation = `The network suffers from excessive Bufferbloat under load (+${result.bufferbloatDeltaMs} ms latency spike). During concurrent traffic, real-time applications such as video conferencing (Zoom/Teams) and gaming will experience high packet delay, jitter (${result.jitterMs} ms), and dropped audio frames.`;
+    explanation = `The network suffers from Bufferbloat under load (+${result.bufferbloatDeltaMs} ms latency spike). During concurrent traffic, real-time applications will experience packet delay and jitter (${result.jitterMs} ms).`;
   } else {
-    explanation = `The overall network telemetry shows stable bandwidth distribution. YouTube CDN delivery rate measured ${result.youtubeCdnSpeedMbps} Mbps (${result.youtube4kBufferRatio}x real-time 4K requirement). Multi-stream vs single-stream parity remains within acceptable tolerance limits.`;
+    explanation = `The overall network telemetry shows stable bandwidth distribution. YouTube CDN delivery rate measured ${result.youtubeCdnSpeedMBps} MB/s (${result.youtube4kBufferRatio}x real-time 4K requirement). Multi-stream vs single-stream parity remains within acceptable tolerance limits.`;
   }
 
   const splitText = doc.splitTextToSize(explanation, 182);
   doc.text(splitText, 14, y + 18);
 
-  // Regulatory Instructions Notice Box
+  // Regulatory Instructions
   const boxY = y + 36;
   doc.setFillColor(254, 242, 242);
   doc.setDrawColor(248, 113, 113);
@@ -126,13 +126,13 @@ export function generateIspComplaintPdf(
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.text('1. Attach this PDF report directly to your ISP customer support ticket.', 18, boxY + 13);
-  doc.text('2. Request immediate escalation to Level 2/3 Network Operations (NOC) for line quality & node congestion verification.', 18, boxY + 18);
+  doc.text('2. Request immediate escalation to Level 2/3 Network Operations (NOC) for line quality verification.', 18, boxY + 18);
   doc.text('3. If unresolved within 14 business days, submit this document to regulatory agencies (FCC Consumer Complaints / BEREC).', 18, boxY + 23);
 
-  // Footer Signature Line
+  // Footer Signature
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
-  doc.text('Generated by Network Diagnostic & ISP Intelligence Hub — Automated Telemetry Audit Engine', 14, 285);
+  doc.text('Generated by Network Diagnostic & ISP Intelligence Hub — Telemetry Audit Engine', 14, 285);
 
   doc.save(`ISP_Throttling_Report_${reportId}.pdf`);
 }

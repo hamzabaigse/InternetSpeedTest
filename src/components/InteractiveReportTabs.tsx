@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { DiagnosticResult } from '@/lib/speedTestEngine';
-import { generateIspComplaintPdf } from '@/lib/pdfGenerator';
-import { Activity, Tv, Gamepad2, Wrench, ShieldAlert, CheckCircle2, AlertTriangle, ArrowRight, Download, Server, Play } from 'lucide-react';
+import { Activity, Tv, Gamepad2, Wrench, AlertCircle } from 'lucide-react';
 import { ActionCards } from './ActionCards';
 
 interface ReportTabsProps {
@@ -68,7 +67,7 @@ export const InteractiveReportTabs: React.FC<ReportTabsProps> = ({ result, onTab
           }`}
         >
           <Wrench className="w-4 h-4" />
-          <span>Router Tweaks & DNS</span>
+          <span>Router Tweaks &amp; DNS</span>
         </button>
       </div>
 
@@ -78,14 +77,14 @@ export const InteractiveReportTabs: React.FC<ReportTabsProps> = ({ result, onTab
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase">Download Speed</span>
-              <div className="text-2xl font-black text-white font-mono mt-1">{result.downloadMbps} <span className="text-xs text-cyan-400">Mbps</span></div>
-              <div className="text-[10px] text-slate-400 mt-1">Multi-stream aggregate</div>
+              <div className="text-2xl font-black text-white font-mono mt-1">{result.downloadMBps} <span className="text-xs text-cyan-400">MB/s</span></div>
+              <div className="text-[10px] text-slate-400 mt-1">({result.downloadMbps} Megabits/s)</div>
             </div>
 
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
               <span className="text-[10px] font-semibold text-slate-400 uppercase">Upload Speed</span>
-              <div className="text-2xl font-black text-white font-mono mt-1">{result.uploadMbps} <span className="text-xs text-emerald-400">Mbps</span></div>
-              <div className="text-[10px] text-slate-400 mt-1">Zoom & Twitch capacity</div>
+              <div className="text-2xl font-black text-white font-mono mt-1">{result.uploadMBps} <span className="text-xs text-purple-400">MB/s</span></div>
+              <div className="text-[10px] text-slate-400 mt-1">({result.uploadMbps} Megabits/s)</div>
             </div>
 
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
@@ -112,19 +111,19 @@ export const InteractiveReportTabs: React.FC<ReportTabsProps> = ({ result, onTab
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Tv className="w-5 h-5 text-cyan-400" />
-                <h4 className="text-sm font-bold text-white">YouTube & 4K CDN Buffer Telemetry</h4>
+                <h4 className="text-sm font-bold text-white">YouTube &amp; 4K CDN Buffer Telemetry</h4>
               </div>
               <span className="bg-cyan-500/20 text-cyan-300 text-xs font-bold px-2.5 py-1 rounded border border-cyan-500/30">
                 {result.youtube4kStatus}
               </span>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed mb-4">
-              Raw speed does not guarantee smooth 4K streaming if your ISP has congested peering with Google YouTube CDN endpoints. We fetched real video chunks to verify buffer health.
+              Raw speed does not guarantee smooth 4K streaming if your ISP has congested peering with Google YouTube CDN endpoints.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900/60 p-4 rounded-lg border border-slate-800">
               <div>
                 <span className="text-[11px] text-slate-400">YouTube CDN Speed:</span>
-                <div className="text-lg font-bold text-cyan-400 font-mono">{result.youtubeCdnSpeedMbps} Mbps</div>
+                <div className="text-lg font-bold text-cyan-400 font-mono">{result.youtubeCdnSpeedMBps} MB/s</div>
               </div>
               <div>
                 <span className="text-[11px] text-slate-400">4K Buffer Refill Rate:</span>
@@ -178,7 +177,7 @@ export const InteractiveReportTabs: React.FC<ReportTabsProps> = ({ result, onTab
         <div className="space-y-4">
           <h4 className="text-sm font-bold text-white flex items-center gap-2">
             <Wrench className="w-4 h-4 text-cyan-400" />
-            Recommended Router & DNS Tweaks for Faster Speeds
+            Recommended Router &amp; DNS Tweaks for Faster Speeds
           </h4>
 
           <div className="space-y-3">
@@ -192,7 +191,7 @@ export const InteractiveReportTabs: React.FC<ReportTabsProps> = ({ result, onTab
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
               <div className="text-xs font-bold text-cyan-400 mb-1">2. Enable SQM (Smart Queue Management) or QoS</div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Log into your router admin panel (usually 192.168.1.1 or 192.168.0.1), navigate to Quality of Service (QoS), and cap upload/download at 95% of your measured speeds to eliminate bufferbloat spikes.
+                Log into your router admin panel, navigate to Quality of Service (QoS), and cap upload/download at 95% of your measured MB/s speeds to eliminate bufferbloat spikes.
               </p>
             </div>
           </div>

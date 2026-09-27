@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdSlot } from '@/components/AdSlot';
-import { FileText, ShieldAlert, Download, RefreshCw, Play, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, Download, RefreshCw, Play } from 'lucide-react';
 import { runFullDiagnostic, DiagnosticResult } from '@/lib/speedTestEngine';
 import { generateIspComplaintPdf } from '@/lib/pdfGenerator';
 
@@ -38,7 +38,7 @@ export default function IspThrottlingReportPage() {
               <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">FCC & Regulatory Compliance Audit</span>
+              <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">FCC &amp; Regulatory Compliance Audit</span>
               <h1 className="text-xl sm:text-3xl font-extrabold text-white">
                 ISP Throttling Proof Generator (Exportable PDF Report)
               </h1>
@@ -46,7 +46,7 @@ export default function IspThrottlingReportPage() {
           </div>
 
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-            Tests single-stream vs. multi-stream downloads, Port 80 vs. Port 443 throughput, and latency under load. Generates a one-click <strong>&quot;Official ISP Complaint Report PDF&quot;</strong> ready to attach to support tickets or regulatory filings.
+            Tests single-stream vs. multi-stream downloads in Megabytes per second (MB/s), Port 80 vs. Port 443 throughput, and latency under load. Generates a one-click <strong>&quot;Official ISP Complaint Report PDF&quot;</strong> ready to attach to support tickets or regulatory filings.
           </p>
 
           <div className="bg-slate-950 p-6 rounded-xl border border-slate-800 mb-6 space-y-4">
@@ -108,12 +108,12 @@ export default function IspThrottlingReportPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div>
                     <span className="text-[11px] text-slate-400">Multi-stream Download</span>
-                    <div className="text-xl font-bold text-white font-mono">{result.downloadMbps} Mbps</div>
+                    <div className="text-xl font-bold text-white font-mono">{result.downloadMBps} MB/s</div>
                   </div>
 
                   <div>
                     <span className="text-[11px] text-slate-400">Single-stream Download</span>
-                    <div className="text-xl font-bold text-cyan-400 font-mono">{result.singleStreamMbps} Mbps</div>
+                    <div className="text-xl font-bold text-cyan-400 font-mono">{result.singleStreamMBps} MB/s</div>
                   </div>
 
                   <div>
@@ -127,7 +127,7 @@ export default function IspThrottlingReportPage() {
                   className="w-full bg-gradient-to-r from-rose-600 via-red-600 to-orange-600 hover:from-rose-500 hover:to-orange-500 text-white font-extrabold text-sm py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 shadow-xl transition"
                 >
                   <Download className="w-5 h-5" />
-                  <span>Download Official ISP Complaint Report (PDF)</span>
+                  <span>Download Free Official ISP Complaint Report (PDF)</span>
                 </button>
               </div>
 

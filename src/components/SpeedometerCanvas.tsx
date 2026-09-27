@@ -5,27 +5,22 @@ import { speedToLogScalePercent } from '@/lib/speedTestEngine';
 import { ArrowDownCircle, ArrowUpCircle, Zap } from 'lucide-react';
 
 interface SpeedometerCanvasProps {
-  value: number; // live speed or ping value
+  value: number; // live speed in MB/s
   unit?: string;
   isTesting: boolean;
   stageName?: string;
-  displayMode?: 'Mbps' | 'MBps';
   activePhase?: 'download' | 'upload' | 'ping' | 'other';
 }
 
 export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
   value,
-  unit = 'Mbps',
+  unit = 'MB/s',
   isTesting,
   stageName = 'Ready',
-  displayMode = 'Mbps',
   activePhase = 'download',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentAnglePercentRef = useRef<number>(0);
-
-  const displayVal = displayMode === 'MBps' && unit === 'Mbps' ? value / 8 : value;
-  const displayUnit = unit === 'Mbps' ? (displayMode === 'MBps' ? 'MB/s' : 'Mbps') : unit;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,13 +45,13 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       // Outer track background arc
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-      ctx.strokeStyle = '#172033'; // sleek dark slate
+      ctx.strokeStyle = '#172033';
       ctx.lineWidth = 18;
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Target percent using logarithmic scale mapping
-      const targetPercent = unit === 'Mbps' ? speedToLogScalePercent(value) : Math.min(1.0, value / 200);
+      // Target percent using logarithmic scale mapping for MB/s
+      const targetPercent = unit === 'MB/s' ? speedToLogScalePercent(value) : Math.min(1.0, value / 200);
 
       // Smooth LERP spring physics on needle angle
       currentAnglePercentRef.current += (targetPercent - currentAnglePercentRef.current) * 0.18;
@@ -64,15 +59,15 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
 
       const activeAngle = startAngle + (endAngle - startAngle) * currentPercent;
 
-      // Draw glowing active progress gradient arc
+      // Glowing active progress gradient
       if (currentPercent > 0.001) {
         const gradient = ctx.createLinearGradient(0, 0, width, 0);
         if (activePhase === 'upload') {
-          gradient.addColorStop(0, '#a855f7'); // purple
-          gradient.addColorStop(1, '#ec4899'); // pink
+          gradient.addColorStop(0, '#a855f7');
+          gradient.addColorStop(1, '#ec4899');
         } else {
-          gradient.addColorStop(0, '#06b6d4'); // cyan
-          gradient.addColorStop(1, '#3b82f6'); // blue
+          gradient.addColorStop(0, '#06b6d4');
+          gradient.addColorStop(1, '#3b82f6');
         }
 
         ctx.beginPath();
@@ -83,17 +78,17 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Clean Logarithmic Tick Marks & Dial Clock Numbers (0, 5, 10, 50, 100, 250, 500, 750, 1000)
+      // Logarithmic Ticks for Megabytes per second (0, 1, 2, 8, 15, 35, 65, 95, 125 MB/s)
       const ticks = [
         { label: '0', val: 0 },
-        { label: '5', val: 5 },
-        { label: '10', val: 10 },
-        { label: '50', val: 50 },
-        { label: '100', val: 100 },
-        { label: '250', val: 250 },
-        { label: '500', val: 500 },
-        { label: '750', val: 750 },
-        { label: '1000', val: 1000 },
+        { label: '1', val: 1 },
+        { label: '2', val: 2 },
+        { label: '8', val: 8 },
+        { label: '15', val: 15 },
+        { label: '35', val: 35 },
+        { label: '65', val: 65 },
+        { label: '95', val: 95 },
+        { label: '125', val: 125 },
       ];
 
       ticks.forEach((tick) => {
@@ -115,7 +110,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Clock Number Label Text
+        // Label Text
         const textR = radius - 38;
         const tx = centerX + Math.cos(a) * textR;
         const ty = centerY + Math.sin(a) * textR;
@@ -127,7 +122,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.fillText(tick.label, tx, ty);
       });
 
-      // Draw Sleek Needle
+      // Needle
       const needleX = centerX + Math.cos(activeAngle) * (radius - 10);
       const needleY = centerY + Math.sin(activeAngle) * (radius - 10);
 
@@ -139,7 +134,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Dark Metallic Knob Center
+      // Dark Knob Center
       ctx.beginPath();
       ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
       ctx.fillStyle = '#0f172a';
@@ -160,7 +155,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-2">
-      {/* Clean & Sleek Dial Face (No text clutter inside dial) */}
+      {/* Sleek Dial Face */}
       <canvas
         ref={canvasRef}
         width={380}
@@ -168,20 +163,16 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         className="w-[380px] h-[240px] max-w-full"
       />
 
-      {/* Prominent Speed Readout Positioned Directly Below Meter */}
+      {/* Prominent Speed Readout in MB/s Below Meter */}
       <div className="flex flex-col items-center justify-center text-center mt-2">
-        {/* Large Speed Number */}
         <div className="text-4xl sm:text-6xl font-black text-white tracking-tight flex items-baseline gap-2 font-mono">
-          <span>{displayVal.toFixed(2)}</span>
-          <span className="text-sm sm:text-base font-bold text-cyan-400 font-sans">{displayUnit}</span>
+          <span>{value.toFixed(2)}</span>
+          <span className="text-sm sm:text-base font-bold text-cyan-400 font-sans">MB/s</span>
         </div>
 
-        {/* Megabytes conversion sub-display */}
-        {unit === 'Mbps' && (
-          <div className="text-xs text-slate-400 font-mono mt-1">
-            ({(value / 8).toFixed(2)} Megabytes/sec)
-          </div>
-        )}
+        <div className="text-xs text-slate-400 font-mono mt-1">
+          ({(value * 8).toFixed(1)} Megabits/sec)
+        </div>
 
         {/* Active Stage Indicator Badge */}
         <div className="mt-3 inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-1 rounded-full text-xs font-bold text-slate-200 shadow-md">
