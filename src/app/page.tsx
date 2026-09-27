@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdSlot } from '@/components/AdSlot';
 import { SpeedometerCanvas } from '@/components/SpeedometerCanvas';
+import { OoklaHeaderHud } from '@/components/OoklaHeaderHud';
 import { ProgressiveDiagnosticConsole } from '@/components/ProgressiveDiagnosticConsole';
 import { InteractiveReportTabs } from '@/components/InteractiveReportTabs';
 import { runFullDiagnostic, DiagnosticResult, DiagnosticStage } from '@/lib/speedTestEngine';
@@ -17,9 +18,14 @@ export default function Home() {
   const [stage, setStage] = useState<DiagnosticStage>('IDLE');
   const [progress, setProgress] = useState(0);
   const [gaugeValue, setGaugeValue] = useState(0);
-  const [runningAvg, setRunningAvg] = useState<number | undefined>(undefined);
+  const [smoothedDownload, setSmoothedDownload] = useState<number | undefined>(undefined);
+  const [smoothedUpload, setSmoothedUpload] = useState<number | undefined>(undefined);
+  const [idlePing, setIdlePing] = useState<number | undefined>(undefined);
+  const [downloadLoadedPing, setDownloadLoadedPing] = useState<number | undefined>(undefined);
+  const [uploadLoadedPing, setUploadLoadedPing] = useState<number | undefined>(undefined);
+  
   const [gaugeUnit, setGaugeUnit] = useState<'Mbps' | 'ms' | 'Score'>('Mbps');
-  const [unitMode, setUnitMode] = useState<'Mbps' | 'MBps'>('Mbps'); // Megabits/s vs Megabytes/s
+  const [unitMode, setUnitMode] = useState<'Mbps' | 'MBps'>('Mbps');
   const [consoleLog, setConsoleLog] = useState<string[]>([]);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [tabRefreshCounter, setTabRefreshCounter] = useState(0);
@@ -30,14 +36,24 @@ export default function Home() {
     setConsoleLog([]);
     setProgress(0);
     setGaugeValue(0);
-    setRunningAvg(undefined);
+    setSmoothedDownload(undefined);
+    setSmoothedUpload(undefined);
+    setIdlePing(undefined);
+    setDownloadLoadedPing(undefined);
+    setUploadLoadedPing(undefined);
 
     try {
       const finalResult = await runFullDiagnostic((data) => {
         setStage(data.stage);
         setProgress(data.stagePercent);
-        setGaugeValue(data.currentGaugeValue);
-        setRunningAvg(data.runningAverageMbps);
+        setGaugeValue(data.gaugeValue);
+        
+        if (data.smoothedDownloadMbps !== undefined) setSmoothedDownload(data.smoothedDownloadMbps);
+        if (data.smoothedUploadMbps !== undefined) setSmoothedUpload(data.smoothedUploadMbps);
+        if (data.idlePingMs !== undefined) setIdlePing(data.idlePingMs);
+        if (data.downloadLoadedPingMs !== undefined) setDownloadLoadedPing(data.downloadLoadedPingMs);
+        if (data.uploadLoadedPingMs !== undefined) setUploadLoadedPing(data.uploadLoadedPingMs);
+
         setGaugeUnit(data.gaugeUnit);
         setConsoleLog((prev) => [...prev.slice(-15), data.consoleMessage]);
       });
@@ -75,10 +91,10 @@ export default function Home() {
             Comprehensive 40-Second Network Intelligence Test
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto mt-2">
-            Measures real-time &amp; average download/upload speeds, YouTube 4K CDN buffer rate, bufferbloat latency spikes, and game datacenters.
+            Measures real-time download/upload throughput, YouTube 4K CDN buffer rate, bufferbloat latency spikes, and game datacenters.
           </p>
 
-          {/* Unit Toggle Switch: Megabits vs Megabytes */}
+          {/* Unit Toggle Switch */}
           <div className="flex items-center justify-center gap-3 mt-4">
             <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
               <Info className="w-3.5 h-3.5 text-cyan-400" /> Display Unit:
@@ -116,11 +132,22 @@ export default function Home() {
                 <Activity className="w-48 h-48 text-cyan-400" />
               </div>
 
+              {/* Ookla-Inspired Top Header HUD (Download, Upload, Ping, 5-Dot Ratings) */}
+              <OoklaHeaderHud
+                downloadMbps={result?.downloadMbps ?? smoothedDownload}
+                uploadMbps={result?.uploadMbps ?? smoothedUpload}
+                idlePingMs={result?.idlePingMs ?? idlePing}
+                downloadLoadedPingMs={result?.downloadLoadedPingMs ?? downloadLoadedPing}
+                uploadLoadedPingMs={result?.uploadLoadedPingMs ?? uploadLoadedPing}
+                categoryScores={result?.categoryScores}
+                isTesting={isTesting}
+                stage={stage}
+              />
+
+              {/* Speedometer Gauge & Start Button */}
               <div className="flex flex-col items-center justify-center">
                 <SpeedometerCanvas
                   value={gaugeValue}
-                  runningAvg={runningAvg}
-                  maxValue={stage === 'STAGE_2_BUFFERBLOAT_CHECK' || stage === 'STAGE_4_VOIP_UDP_CHECK' ? 200 : 500}
                   unit={gaugeUnit}
                   displayMode={unitMode}
                   isTesting={isTesting}

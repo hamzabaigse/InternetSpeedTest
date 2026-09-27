@@ -1,31 +1,29 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { speedToLogScalePercent } from '@/lib/speedTestEngine';
 
 interface SpeedometerCanvasProps {
   value: number; // live speed or value
-  runningAvg?: number; // running average speed
-  maxValue?: number;
   unit?: string;
   isTesting: boolean;
   stageName?: string;
-  displayMode?: 'Mbps' | 'MBps'; // Megabits vs Megabytes
+  displayMode?: 'Mbps' | 'MBps';
 }
 
 export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
   value,
-  runningAvg,
-  maxValue = 500,
   unit = 'Mbps',
   isTesting,
-  stageName = 'Ready to Diagnose',
+  stageName = 'Ready',
   displayMode = 'Mbps',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Convert value according to displayMode
+  // Smooth needle animation state (Linear Interpolation LERP)
+  const currentAnglePercentRef = useRef<number>(0);
+
   const displayVal = displayMode === 'MBps' && unit === 'Mbps' ? value / 8 : value;
-  const displayAvg = runningAvg !== undefined ? (displayMode === 'MBps' && unit === 'Mbps' ? runningAvg / 8 : runningAvg) : undefined;
   const displayUnit = unit === 'Mbps' ? (displayMode === 'MBps' ? 'MB/s' : 'Mbps') : unit;
 
   useEffect(() => {
@@ -41,81 +39,107 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       const width = canvas.width;
       const height = canvas.height;
       const centerX = width / 2;
-      const centerY = height * 0.65;
-      const radius = Math.min(width, height) * 0.4;
+      const centerY = height * 0.62;
+      const radius = Math.min(width, height) * 0.42;
 
       ctx.clearRect(0, 0, width, height);
 
-      // Telemetry wave
+      // Telemetry background wave
       if (isTesting) {
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
         ctx.lineWidth = 2;
-        waveOffset += 0.05;
+        waveOffset += 0.04;
         for (let x = 0; x < width; x += 5) {
-          const y = height * 0.85 + Math.sin(x * 0.02 + waveOffset) * 12;
+          const y = height * 0.82 + Math.sin(x * 0.02 + waveOffset) * 10;
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
       }
 
-      // Outer Arc Track
-      const startAngle = Math.PI * 0.85;
-      const endAngle = Math.PI * 2.15;
+      const startAngle = Math.PI * 0.82;
+      const endAngle = Math.PI * 2.18;
 
+      // Outer track arc
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
       ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 14;
+      ctx.lineWidth = 16;
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Active progress arc
-      const clampedValue = Math.min(Math.max(value, 0), maxValue);
-      const percent = clampedValue / maxValue;
-      const currentAngle = startAngle + (endAngle - startAngle) * percent;
+      // Target percent using logarithmic scale mapping
+      const targetPercent = unit === 'Mbps' ? speedToLogScalePercent(value) : Math.min(1.0, value / 200);
 
-      if (percent > 0) {
+      // Smooth LERP (spring physics on needle angle)
+      currentAnglePercentRef.current += (targetPercent - currentAnglePercentRef.current) * 0.15;
+      const currentPercent = currentAnglePercentRef.current;
+
+      const activeAngle = startAngle + (endAngle - startAngle) * currentPercent;
+
+      // Draw glowing active progress gradient
+      if (currentPercent > 0.001) {
         const gradient = ctx.createLinearGradient(0, 0, width, 0);
         gradient.addColorStop(0, '#06b6d4');
         gradient.addColorStop(0.5, '#3b82f6');
-        gradient.addColorStop(1, '#10b981');
+        gradient.addColorStop(1, '#8b5cf6');
 
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, startAngle, currentAngle);
+        ctx.arc(centerX, centerY, radius, startAngle, activeAngle);
         ctx.strokeStyle = gradient;
-        ctx.lineWidth = 14;
+        ctx.lineWidth = 16;
         ctx.lineCap = 'round';
         ctx.stroke();
       }
 
-      // Ticks
-      const ticks = 10;
-      for (let i = 0; i <= ticks; i++) {
-        const tickPercent = i / ticks;
-        const tickAngle = startAngle + (endAngle - startAngle) * tickPercent;
+      // Ookla Logarithmic Tick Marks: 0, 5, 10, 50, 100, 250, 500, 750, 1000
+      const ticks = [
+        { label: '0', val: 0 },
+        { label: '5', val: 5 },
+        { label: '10', val: 10 },
+        { label: '50', val: 50 },
+        { label: '100', val: 100 },
+        { label: '250', val: 250 },
+        { label: '500', val: 500 },
+        { label: '750', val: 750 },
+        { label: '1000', val: 1000 },
+      ];
+
+      ticks.forEach((tick) => {
+        const p = speedToLogScalePercent(tick.val);
+        const a = startAngle + (endAngle - startAngle) * p;
         const innerR = radius - 18;
         const outerR = radius - 24;
 
-        const x1 = centerX + Math.cos(tickAngle) * innerR;
-        const y1 = centerY + Math.sin(tickAngle) * innerR;
-        const x2 = centerX + Math.cos(tickAngle) * outerR;
-        const y2 = centerY + Math.sin(tickAngle) * outerR;
+        const x1 = centerX + Math.cos(a) * innerR;
+        const y1 = centerY + Math.sin(a) * innerR;
+        const x2 = centerX + Math.cos(a) * outerR;
+        const y2 = centerY + Math.sin(a) * outerR;
 
+        // Tick line
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = i % 2 === 0 ? '#64748b' : '#334155';
-        ctx.lineWidth = i % 2 === 0 ? 2 : 1;
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
         ctx.stroke();
-      }
 
-      // Needle
-      const needleAngle = currentAngle;
-      const needleLen = radius - 10;
-      const needleX = centerX + Math.cos(needleAngle) * needleLen;
-      const needleY = centerY + Math.sin(needleAngle) * needleLen;
+        // Tick Label Text
+        const textR = radius - 36;
+        const tx = centerX + Math.cos(a) * textR;
+        const ty = centerY + Math.sin(a) * textR;
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tick.label, tx, ty);
+      });
+
+      // Draw Needle
+      const needleX = centerX + Math.cos(activeAngle) * (radius - 8);
+      const needleY = centerY + Math.sin(activeAngle) * (radius - 8);
 
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
@@ -127,7 +151,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
 
       // Knob
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
       ctx.fillStyle = '#0f172a';
       ctx.fill();
       ctx.strokeStyle = '#06b6d4';
@@ -142,39 +166,31 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [value, maxValue, isTesting]);
+  }, [value, isTesting, unit]);
 
   return (
-    <div className="relative w-full flex flex-col items-center justify-center p-4">
+    <div className="relative w-full flex flex-col items-center justify-center p-2">
       <canvas
         ref={canvasRef}
-        width={340}
-        height={240}
-        className="w-[340px] h-[240px] max-w-full"
+        width={360}
+        height={250}
+        className="w-[360px] h-[250px] max-w-full"
       />
-      {/* Digital HUD Overlay */}
-      <div className="absolute top-[48%] flex flex-col items-center justify-center pointer-events-none text-center">
-        {/* Real-time Instantaneous Speed */}
+
+      {/* Digital HUD Display */}
+      <div className="absolute top-[52%] flex flex-col items-center justify-center pointer-events-none text-center">
         <div className="text-4xl sm:text-5xl font-black text-white tracking-tight flex items-baseline gap-1 font-mono">
-          <span>{displayVal.toFixed(1)}</span>
+          <span>{displayVal.toFixed(2)}</span>
           <span className="text-xs sm:text-sm font-bold text-cyan-400 font-sans">{displayUnit}</span>
         </div>
 
-        {/* Live vs Running Average Pill */}
-        {isTesting && displayAvg !== undefined && unit === 'Mbps' && (
-          <div className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded mt-1 shadow">
-            Avg: {displayAvg.toFixed(1)} {displayUnit}
-          </div>
-        )}
-
-        {/* Unit explanation tooltip */}
         {unit === 'Mbps' && (
-          <div className="text-[9px] text-slate-400 font-mono mt-0.5">
-            ({(value / 8).toFixed(1)} Megabytes/sec)
+          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+            ({(value / 8).toFixed(2)} Megabytes/sec)
           </div>
         )}
 
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-300 mt-1.5 bg-slate-900/90 px-2.5 py-0.5 rounded border border-slate-800">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-300 mt-1.5 bg-slate-900/90 px-3 py-0.5 rounded border border-slate-800">
           {stageName}
         </div>
       </div>
