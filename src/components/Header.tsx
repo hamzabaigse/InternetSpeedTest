@@ -15,11 +15,11 @@ export const Header: React.FC = () => {
           <div>
             <div className="font-extrabold text-white text-base tracking-tight flex items-center gap-1.5">
               SpeedNet<span className="text-cyan-400">Hub</span>
-              <span className="bg-cyan-500/10 text-cyan-400 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
-                PRO DIAGNOSTIC
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
+                100% FREE HUB
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 hidden sm:block">ISP Intelligence & Network Telemetry</p>
+            <p className="text-[10px] text-slate-400 hidden sm:block">Free ISP Intelligence &amp; Network Telemetry</p>
           </div>
         </Link>
 
@@ -62,7 +62,7 @@ export const Header: React.FC = () => {
             className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-lg transition shadow-md flex items-center gap-1.5"
           >
             <ShieldAlert className="w-4 h-4" />
-            <span className="hidden sm:inline">ISP Complaint PDF</span>
+            <span className="hidden sm:inline">Free PDF Complaint</span>
           </Link>
         </div>
       </div>
