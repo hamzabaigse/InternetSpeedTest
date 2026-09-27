@@ -5,35 +5,49 @@ import { ArrowDownCircle, ArrowUpCircle, Zap, Globe, Gamepad2, Tv, Video } from 
 import { CategoryScores } from '@/lib/speedTestEngine';
 
 interface OoklaHeaderHudProps {
-  downloadMBps?: number;
-  uploadMBps?: number;
+  downloadMbps?: number;
+  uploadMbps?: number;
   idlePingMs?: number;
   downloadLoadedPingMs?: number;
   uploadLoadedPingMs?: number;
   categoryScores?: CategoryScores;
   isTesting: boolean;
   activePhase?: 'download' | 'upload' | 'ping' | 'other';
-  liveGaugeVal?: number;
+  liveGaugeValMbps?: number;
+  unitMode?: 'Mbps' | 'MBps';
 }
 
 export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
-  downloadMBps,
-  uploadMBps,
+  downloadMbps,
+  uploadMbps,
   idlePingMs,
   downloadLoadedPingMs,
   uploadLoadedPingMs,
   categoryScores = { webBrowsingDots: 5, gamingDots: 5, videoStreamingDots: 5, videoCallingDots: 5 },
   isTesting,
   activePhase,
-  liveGaugeVal = 0,
+  liveGaugeValMbps = 0,
+  unitMode = 'Mbps',
 }) => {
-  const displayDownload = downloadMBps !== undefined 
-    ? downloadMBps.toFixed(2) 
-    : (isTesting && activePhase === 'download' ? liveGaugeVal.toFixed(2) : '--.--');
+  const isMBps = unitMode === 'MBps';
+  const unitLabel = isMBps ? 'MB/s' : 'Mbps';
 
-  const displayUpload = uploadMBps !== undefined 
-    ? uploadMBps.toFixed(2) 
-    : (isTesting && activePhase === 'upload' ? liveGaugeVal.toFixed(2) : '--.--');
+  // Format helper
+  const fmt = (valMbps?: number) => {
+    if (valMbps === undefined) return '--.--';
+    const finalVal = isMBps ? valMbps / 8 : valMbps;
+    return finalVal.toFixed(2);
+  };
+
+  const liveValFormatted = (isMBps ? liveGaugeValMbps / 8 : liveGaugeValMbps).toFixed(2);
+
+  const displayDownload = downloadMbps !== undefined 
+    ? fmt(downloadMbps) 
+    : (isTesting && activePhase === 'download' ? liveValFormatted : '--.--');
+
+  const displayUpload = uploadMbps !== undefined 
+    ? fmt(uploadMbps) 
+    : (isTesting && activePhase === 'upload' ? liveValFormatted : '--.--');
 
   const renderDots = (count: number) => (
     <div className="flex items-center justify-center gap-1 mt-1">
@@ -50,30 +64,30 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
 
   return (
     <div className="w-full bg-slate-950/90 border border-slate-800/90 rounded-2xl p-4 sm:p-6 mb-6 shadow-2xl">
-      {/* Header Numbers (DOWNLOAD MB/s, UPLOAD MB/s, PING) */}
+      {/* Header Numbers (DOWNLOAD, UPLOAD, PING) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center border-b border-slate-800/80 pb-6 mb-6 text-center">
-        {/* DOWNLOAD MB/s */}
+        {/* DOWNLOAD */}
         <div className={`flex flex-col items-center p-2 rounded-xl transition ${
           activePhase === 'download' ? 'bg-cyan-950/60 border border-cyan-500/40 glow-cyan' : ''
         }`}>
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-cyan-400">
             <ArrowDownCircle className={`w-4 h-4 text-cyan-400 ${activePhase === 'download' ? 'animate-bounce' : ''}`} />
             <span>DOWNLOAD</span>
-            <span className="text-[10px] text-cyan-300 font-mono">MB/s</span>
+            <span className="text-[10px] text-cyan-300 font-mono">{unitLabel}</span>
           </div>
           <div className="text-3xl sm:text-5xl font-black text-white font-mono mt-1 tracking-tight">
             {displayDownload}
           </div>
         </div>
 
-        {/* UPLOAD MB/s */}
+        {/* UPLOAD */}
         <div className={`flex flex-col items-center p-2 rounded-xl transition ${
           activePhase === 'upload' ? 'bg-purple-950/60 border border-purple-500/40' : ''
         }`}>
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-purple-400">
             <ArrowUpCircle className={`w-4 h-4 text-purple-400 ${activePhase === 'upload' ? 'animate-bounce' : ''}`} />
             <span>UPLOAD</span>
-            <span className="text-[10px] text-purple-300 font-mono">MB/s</span>
+            <span className="text-[10px] text-purple-300 font-mono">{unitLabel}</span>
           </div>
           <div className="text-3xl sm:text-5xl font-black text-white font-mono mt-1 tracking-tight">
             {displayUpload}
@@ -102,7 +116,7 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
         </div>
       </div>
 
-      {/* Category Readiness Icons */}
+      {/* Ookla-Style Category Readiness Icons */}
       <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-xl mx-auto text-center">
         <div className="flex flex-col items-center p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Globe className="w-5 h-5 text-cyan-400" />

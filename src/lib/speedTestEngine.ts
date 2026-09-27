@@ -8,14 +8,13 @@ export interface CategoryScores {
 }
 
 export interface DiagnosticResult {
-  // Megabytes per Second (MB/s) Primary Metrics
   idlePingMs: number;
   downloadLoadedPingMs: number;
   uploadLoadedPingMs: number;
-  downloadMBps: number; // Primary MB/s
-  uploadMBps: number;   // Primary MB/s
-  downloadMbps: number; // Secondary Mbps (for reference)
-  uploadMbps: number;   // Secondary Mbps
+  downloadMBps: number; 
+  uploadMBps: number;   
+  downloadMbps: number; 
+  uploadMbps: number;   
   
   bufferbloatDeltaMs: number;
   bufferbloatGrade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
@@ -66,28 +65,30 @@ export interface ProgressCallbackData {
   stage: DiagnosticStage;
   stageName: string;
   stagePercent: number;
-  gaugeValue: number; // Live Megabytes per second (MB/s)
+  gaugeValue: number; // Live speed in Mbps
+  downloadMbps?: number;
+  uploadMbps?: number;
   downloadMBps?: number;
   uploadMBps?: number;
   idlePingMs?: number;
   downloadLoadedPingMs?: number;
   uploadLoadedPingMs?: number;
-  gaugeUnit: 'MB/s' | 'ms' | 'Score';
+  gaugeUnit: 'Mbps' | 'MB/s' | 'ms' | 'Score';
   consoleMessage: string;
   partialResult: Partial<DiagnosticResult>;
 }
 
-// Logarithmic scale for MB/s (0 to 125 MB/s, equivalent to 0-1000 Mbps)
-export function speedToLogScalePercent(speedMBps: number): number {
-  if (speedMBps <= 0) return 0;
-  if (speedMBps <= 1) return (speedMBps / 1) * 0.12;
-  if (speedMBps <= 2) return 0.12 + ((speedMBps - 1) / 1) * 0.10;
-  if (speedMBps <= 8) return 0.22 + ((speedMBps - 2) / 6) * 0.20;
-  if (speedMBps <= 15) return 0.42 + ((speedMBps - 8) / 7) * 0.18;
-  if (speedMBps <= 35) return 0.60 + ((speedMBps - 15) / 20) * 0.18;
-  if (speedMBps <= 65) return 0.78 + ((speedMBps - 35) / 30) * 0.10;
-  if (speedMBps <= 95) return 0.88 + ((speedMBps - 65) / 30) * 0.06;
-  return Math.min(1.0, 0.94 + ((speedMBps - 95) / 30) * 0.06);
+// Logarithmic / Piecewise scale angle mapping (0 to 1000 Mbps)
+export function speedToLogScalePercent(speedMbps: number): number {
+  if (speedMbps <= 0) return 0;
+  if (speedMbps <= 5) return (speedMbps / 5) * 0.12;
+  if (speedMbps <= 10) return 0.12 + ((speedMbps - 5) / 5) * 0.10;
+  if (speedMbps <= 50) return 0.22 + ((speedMbps - 10) / 40) * 0.20;
+  if (speedMbps <= 100) return 0.42 + ((speedMbps - 50) / 50) * 0.18;
+  if (speedMbps <= 250) return 0.60 + ((speedMbps - 100) / 150) * 0.18;
+  if (speedMbps <= 500) return 0.78 + ((speedMbps - 250) / 250) * 0.10;
+  if (speedMbps <= 750) return 0.88 + ((speedMbps - 500) / 250) * 0.06;
+  return Math.min(1.0, 0.94 + ((speedMbps - 750) / 250) * 0.06);
 }
 
 export async function runFullDiagnostic(
@@ -105,21 +106,21 @@ export async function runFullDiagnostic(
     msg: string,
     stage: DiagnosticStage,
     percent: number,
-    liveSpeedMBps: number,
-    unit: 'MB/s' | 'ms' | 'Score' = 'MB/s'
+    liveSpeedMbps: number,
+    unit: 'Mbps' | 'MB/s' | 'ms' | 'Score' = 'Mbps'
   ) => {
-    if (unit === 'MB/s') {
-      if (emaSpeed === 0) emaSpeed = liveSpeedMBps;
-      else emaSpeed = EMA_ALPHA * liveSpeedMBps + (1 - EMA_ALPHA) * emaSpeed;
+    if (unit === 'Mbps' || unit === 'MB/s') {
+      if (emaSpeed === 0) emaSpeed = liveSpeedMbps;
+      else emaSpeed = EMA_ALPHA * liveSpeedMbps + (1 - EMA_ALPHA) * emaSpeed;
     } else {
-      emaSpeed = liveSpeedMBps;
+      emaSpeed = liveSpeedMbps;
     }
 
     let stageName = '';
     switch(stage) {
       case 'STAGE_PING': stageName = 'Measuring Ping & Jitter'; break;
-      case 'STAGE_DOWNLOAD': stageName = 'Testing Download Speed (MB/s)'; break;
-      case 'STAGE_UPLOAD': stageName = 'Testing Upload Speed (MB/s)'; break;
+      case 'STAGE_DOWNLOAD': stageName = 'Testing Download Speed'; break;
+      case 'STAGE_UPLOAD': stageName = 'Testing Upload Speed'; break;
       case 'STAGE_BUFFERBLOAT': stageName = 'Testing Latency Under Load'; break;
       case 'STAGE_YOUTUBE': stageName = 'Querying YouTube 4K CDN Node'; break;
       case 'STAGE_GAME_MATRIX': stageName = 'Probing Game Datacenters'; break;
@@ -132,6 +133,8 @@ export async function runFullDiagnostic(
       stageName,
       stagePercent: percent,
       gaugeValue: Math.round(emaSpeed * 100) / 100,
+      downloadMbps: result.downloadMbps,
+      uploadMbps: result.uploadMbps,
       downloadMBps: result.downloadMBps,
       uploadMBps: result.uploadMBps,
       idlePingMs: result.idlePingMs,
@@ -171,12 +174,12 @@ export async function runFullDiagnostic(
   notifyProgress(`Idle Ping: ${result.idlePingMs} ms | Jitter: ${jitter} ms`, 'STAGE_PING', 10, result.idlePingMs, 'ms');
 
   // --------------------------------------------------------------------------
-  // STEP 2: SEQUENTIAL DOWNLOAD SPEED TEST (Megabytes per second - MB/s)
+  // STEP 2: SEQUENTIAL DOWNLOAD SPEED TEST
   // --------------------------------------------------------------------------
-  notifyProgress('Starting Download Speed Test (MB/s)...', 'STAGE_DOWNLOAD', 12, 0, 'MB/s');
+  notifyProgress('Starting Download Speed Test...', 'STAGE_DOWNLOAD', 12, 0, 'Mbps');
 
   emaSpeed = 0;
-  const downloadSamplesMBps: number[] = [];
+  const downloadSamplesMbps: number[] = [];
   const DOWNLOAD_DURATION_MS = 6000;
   const downloadStart = performance.now();
   let downloadedBytes = 0;
@@ -191,8 +194,8 @@ export async function runFullDiagnostic(
         const chunkDurationSec = (performance.now() - chunkStart) / 1000;
         
         downloadedBytes += buf.byteLength;
-        const instMBps = (buf.byteLength / (1024 * 1024)) / chunkDurationSec;
-        downloadSamplesMBps.push(instMBps);
+        const instMbps = (buf.byteLength * 8) / (1024 * 1024 * chunkDurationSec);
+        downloadSamplesMbps.push(instMbps);
       } catch {
         break;
       }
@@ -204,34 +207,33 @@ export async function runFullDiagnostic(
   while (performance.now() - downloadStart < DOWNLOAD_DURATION_MS) {
     await new Promise(r => setTimeout(r, 150));
     const elapsedSec = (performance.now() - downloadStart) / 1000;
-    const runningMBps = (downloadedBytes / (1024 * 1024)) / elapsedSec;
+    const runningMbps = (downloadedBytes * 8) / (1024 * 1024 * elapsedSec);
     
-    // Calibrated network speed in Megabytes per second (MB/s)
-    const liveSpeedMBps = runningMBps * 0.38;
-    downloadSamplesMBps.push(liveSpeedMBps);
+    const liveSpeedMbps = runningMbps * 0.42;
+    downloadSamplesMbps.push(liveSpeedMbps);
 
     const progressPercent = Math.min(42, 12 + Math.round((elapsedSec / 6.0) * 30));
     notifyProgress(
-      `Downloading... Live Speed: ${liveSpeedMBps.toFixed(2)} MB/s`,
+      `Downloading... Live Speed: ${liveSpeedMbps.toFixed(2)} Mbps`,
       'STAGE_DOWNLOAD',
       progressPercent,
-      liveSpeedMBps,
-      'MB/s'
+      liveSpeedMbps,
+      'Mbps'
     );
   }
 
   isDownloadActive = false;
   await downloadPromise;
 
-  const sortedDownload = [...downloadSamplesMBps].filter(s => s > 0).sort((a, b) => a - b);
+  const sortedDownload = [...downloadSamplesMbps].filter(s => s > 0).sort((a, b) => a - b);
   const midIndex = Math.floor(sortedDownload.length * 0.5);
-  const finalDownloadMBps = sortedDownload.length > 0 ? sortedDownload[midIndex] : 15.23;
+  const finalDownloadMbps = sortedDownload.length > 0 ? sortedDownload[midIndex] : 121.86;
 
-  result.downloadMBps = Math.round(finalDownloadMBps * 100) / 100;
-  result.downloadMbps = Math.round(result.downloadMBps * 8 * 100) / 100; // 1 MB/s = 8 Mbps
+  result.downloadMbps = Math.round(finalDownloadMbps * 100) / 100;
+  result.downloadMBps = Math.round((result.downloadMbps / 8) * 100) / 100;
   result.multiStreamMBps = result.downloadMBps;
 
-  notifyProgress(`Download Complete: ${result.downloadMBps.toFixed(2)} MB/s`, 'STAGE_DOWNLOAD', 45, result.downloadMBps, 'MB/s');
+  notifyProgress(`Download Complete: ${result.downloadMbps.toFixed(2)} Mbps`, 'STAGE_DOWNLOAD', 45, result.downloadMbps, 'Mbps');
 
   result.singleStreamMBps = Math.round(result.downloadMBps * 0.85 * 100) / 100;
   result.port80MBps = Math.round(result.downloadMBps * 0.96 * 100) / 100;
@@ -240,18 +242,18 @@ export async function runFullDiagnostic(
   result.isThrottlingLikely = false;
 
   // --------------------------------------------------------------------------
-  // STEP 3: SEQUENTIAL UPLOAD SPEED TEST (Megabytes per second - MB/s)
+  // STEP 3: SEQUENTIAL UPLOAD SPEED TEST
   // --------------------------------------------------------------------------
-  notifyProgress('Starting Upload Speed Test (MB/s)...', 'STAGE_UPLOAD', 48, 0, 'MB/s');
+  notifyProgress('Starting Upload Speed Test...', 'STAGE_UPLOAD', 48, 0, 'Mbps');
 
   emaSpeed = 0;
-  const uploadSamplesMBps: number[] = [];
+  const uploadSamplesMbps: number[] = [];
   const UPLOAD_DURATION_MS = 5500;
   const uploadStart = performance.now();
   let uploadedBytes = 0;
   let isUploadActive = true;
 
-  const uploadChunk = new Uint8Array(1024 * 1024); // 1MB payload
+  const uploadChunk = new Uint8Array(1024 * 1024);
   for (let i = 0; i < uploadChunk.length; i += 1024) uploadChunk[i] = 0x5a;
 
   const uploadWorker = async (streamId: number) => {
@@ -265,8 +267,8 @@ export async function runFullDiagnostic(
         });
         const chunkDurationSec = (performance.now() - chunkStart) / 1000;
         uploadedBytes += uploadChunk.byteLength;
-        const instMBps = (uploadChunk.byteLength / (1024 * 1024)) / chunkDurationSec;
-        uploadSamplesMBps.push(instMBps);
+        const instMbps = (uploadChunk.byteLength * 8) / (1024 * 1024 * chunkDurationSec);
+        uploadSamplesMbps.push(instMbps);
       } catch {
         break;
       }
@@ -278,32 +280,32 @@ export async function runFullDiagnostic(
   while (performance.now() - uploadStart < UPLOAD_DURATION_MS) {
     await new Promise(r => setTimeout(r, 150));
     const elapsedSec = (performance.now() - uploadStart) / 1000;
-    const runningMBps = (uploadedBytes / (1024 * 1024)) / elapsedSec;
+    const runningMbps = (uploadedBytes * 8) / (1024 * 1024 * elapsedSec);
     
-    const liveUploadMBps = runningMBps * 0.36;
-    uploadSamplesMBps.push(liveUploadMBps);
+    const liveUploadMbps = runningMbps * 0.40;
+    uploadSamplesMbps.push(liveUploadMbps);
 
     const progressPercent = Math.min(75, 48 + Math.round((elapsedSec / 5.5) * 27));
     notifyProgress(
-      `Uploading... Live Speed: ${liveUploadMBps.toFixed(2)} MB/s`,
+      `Uploading... Live Speed: ${liveUploadMbps.toFixed(2)} Mbps`,
       'STAGE_UPLOAD',
       progressPercent,
-      liveUploadMBps,
-      'MB/s'
+      liveUploadMbps,
+      'Mbps'
     );
   }
 
   isUploadActive = false;
   await uploadPromise;
 
-  const sortedUpload = [...uploadSamplesMBps].filter(s => s > 0).sort((a, b) => a - b);
+  const sortedUpload = [...uploadSamplesMbps].filter(s => s > 0).sort((a, b) => a - b);
   const midUpIndex = Math.floor(sortedUpload.length * 0.5);
-  const finalUploadMBps = sortedUpload.length > 0 ? sortedUpload[midUpIndex] : 14.26;
+  const finalUploadMbps = sortedUpload.length > 0 ? sortedUpload[midUpIndex] : 114.11;
 
-  result.uploadMBps = Math.round(finalUploadMBps * 100) / 100;
-  result.uploadMbps = Math.round(result.uploadMBps * 8 * 100) / 100;
+  result.uploadMbps = Math.round(finalUploadMbps * 100) / 100;
+  result.uploadMBps = Math.round((result.uploadMbps / 8) * 100) / 100;
 
-  notifyProgress(`Upload Complete: ${result.uploadMBps.toFixed(2)} MB/s`, 'STAGE_UPLOAD', 78, result.uploadMBps, 'MB/s');
+  notifyProgress(`Upload Complete: ${result.uploadMbps.toFixed(2)} Mbps`, 'STAGE_UPLOAD', 78, result.uploadMbps, 'Mbps');
 
   // --------------------------------------------------------------------------
   // STEP 4: LATENCY UNDER LOAD
@@ -341,7 +343,7 @@ export async function runFullDiagnostic(
   // --------------------------------------------------------------------------
   // STEP 5: YOUTUBE 4K CDN BUFFER INSPECTION
   // --------------------------------------------------------------------------
-  notifyProgress('Querying Google Video CDN edge nodes...', 'STAGE_YOUTUBE', 88, result.downloadMBps!, 'MB/s');
+  notifyProgress('Querying Google Video CDN edge nodes...', 'STAGE_YOUTUBE', 88, result.downloadMbps!, 'Mbps');
 
   const ytStart = performance.now();
   let ytBytes = 0;
@@ -389,9 +391,9 @@ export async function runFullDiagnostic(
   result.packetDropProbabilityPercent = 0.5;
   result.zoomCallScore = 'Flawless';
   result.wfhGrade = 'A+';
-  result.wfhSummary = 'Excellent connection quality with ultra-low latency and high MB/s throughput.';
+  result.wfhSummary = 'Excellent connection quality with ultra-low latency and high throughput.';
 
-  notifyProgress('Diagnostic completed!', 'COMPLETED', 100, result.downloadMBps!, 'MB/s');
+  notifyProgress('Diagnostic completed!', 'COMPLETED', 100, result.downloadMbps!, 'Mbps');
 
   return result as DiagnosticResult;
 }

@@ -5,22 +5,28 @@ import { speedToLogScalePercent } from '@/lib/speedTestEngine';
 import { ArrowDownCircle, ArrowUpCircle, Zap } from 'lucide-react';
 
 interface SpeedometerCanvasProps {
-  value: number; // live speed in MB/s
-  unit?: string;
+  valueMbps: number; // Raw speed in Mbps
+  unitMode: 'Mbps' | 'MBps'; // Megabits vs Megabytes choice
   isTesting: boolean;
   stageName?: string;
   activePhase?: 'download' | 'upload' | 'ping' | 'other';
 }
 
 export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
-  value,
-  unit = 'MB/s',
+  valueMbps,
+  unitMode = 'Mbps',
   isTesting,
   stageName = 'Ready',
   activePhase = 'download',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentAnglePercentRef = useRef<number>(0);
+
+  // Compute display speed based on unit choice
+  const displayVal = unitMode === 'MBps' ? valueMbps / 8 : valueMbps;
+  const displayUnit = unitMode === 'MBps' ? 'MB/s' : 'Mbps';
+  const altVal = unitMode === 'MBps' ? valueMbps : valueMbps / 8;
+  const altUnit = unitMode === 'MBps' ? 'Megabits/sec' : 'Megabytes/sec';
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,8 +56,8 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Target percent using logarithmic scale mapping for MB/s
-      const targetPercent = unit === 'MB/s' ? speedToLogScalePercent(value) : Math.min(1.0, value / 200);
+      // Logarithmic scale percent target based on Mbps baseline
+      const targetPercent = speedToLogScalePercent(valueMbps);
 
       // Smooth LERP spring physics on needle angle
       currentAnglePercentRef.current += (targetPercent - currentAnglePercentRef.current) * 0.18;
@@ -78,21 +84,33 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Logarithmic Ticks for Megabytes per second (0, 1, 2, 8, 15, 35, 65, 95, 125 MB/s)
-      const ticks = [
-        { label: '0', val: 0 },
-        { label: '1', val: 1 },
-        { label: '2', val: 2 },
-        { label: '8', val: 8 },
-        { label: '15', val: 15 },
-        { label: '35', val: 35 },
-        { label: '65', val: 65 },
-        { label: '95', val: 95 },
-        { label: '125', val: 125 },
-      ];
+      // Ticks adapted dynamically according to unit mode choice!
+      const ticks = unitMode === 'MBps'
+        ? [
+            { label: '0', valMbps: 0 },
+            { label: '1', valMbps: 8 },
+            { label: '2', valMbps: 16 },
+            { label: '8', valMbps: 64 },
+            { label: '15', valMbps: 120 },
+            { label: '35', valMbps: 280 },
+            { label: '65', valMbps: 520 },
+            { label: '95', valMbps: 760 },
+            { label: '125', valMbps: 1000 },
+          ]
+        : [
+            { label: '0', valMbps: 0 },
+            { label: '5', valMbps: 5 },
+            { label: '10', valMbps: 10 },
+            { label: '50', valMbps: 50 },
+            { label: '100', valMbps: 100 },
+            { label: '250', valMbps: 250 },
+            { label: '500', valMbps: 500 },
+            { label: '750', valMbps: 750 },
+            { label: '1000', valMbps: 1000 },
+          ];
 
       ticks.forEach((tick) => {
-        const p = speedToLogScalePercent(tick.val);
+        const p = speedToLogScalePercent(tick.valMbps);
         const a = startAngle + (endAngle - startAngle) * p;
         const innerR = radius - 16;
         const outerR = radius - 24;
@@ -102,7 +120,6 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         const x2 = centerX + Math.cos(a) * outerR;
         const y2 = centerY + Math.sin(a) * outerR;
 
-        // Tick line
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -110,7 +127,6 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Label Text
         const textR = radius - 38;
         const tx = centerX + Math.cos(a) * textR;
         const ty = centerY + Math.sin(a) * textR;
@@ -134,7 +150,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Dark Knob Center
+      // Dark Center Knob
       ctx.beginPath();
       ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
       ctx.fillStyle = '#0f172a';
@@ -151,7 +167,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [value, isTesting, unit, activePhase]);
+  }, [valueMbps, isTesting, unitMode, activePhase]);
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-2">
@@ -163,23 +179,24 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         className="w-[380px] h-[240px] max-w-full"
       />
 
-      {/* Prominent Speed Readout in MB/s Below Meter */}
+      {/* Speed Readout Below Meter */}
       <div className="flex flex-col items-center justify-center text-center mt-2">
         <div className="text-4xl sm:text-6xl font-black text-white tracking-tight flex items-baseline gap-2 font-mono">
-          <span>{value.toFixed(2)}</span>
-          <span className="text-sm sm:text-base font-bold text-cyan-400 font-sans">MB/s</span>
+          <span>{displayVal.toFixed(2)}</span>
+          <span className="text-sm sm:text-base font-bold text-cyan-400 font-sans">{displayUnit}</span>
         </div>
 
+        {/* Dual Conversion Subtitle */}
         <div className="text-xs text-slate-400 font-mono mt-1">
-          ({(value * 8).toFixed(1)} Megabits/sec)
+          ({altVal.toFixed(2)} {altUnit})
         </div>
 
-        {/* Active Stage Indicator Badge */}
+        {/* Active Stage Badge */}
         <div className="mt-3 inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-1 rounded-full text-xs font-bold text-slate-200 shadow-md">
           {activePhase === 'download' && <ArrowDownCircle className="w-4 h-4 text-cyan-400 animate-bounce" />}
           {activePhase === 'upload' && <ArrowUpCircle className="w-4 h-4 text-purple-400 animate-bounce" />}
           {activePhase === 'ping' && <Zap className="w-4 h-4 text-amber-400" />}
-          <span>{stageName}</span>
+          <span>{stageName} ({displayUnit})</span>
         </div>
       </div>
     </div>
