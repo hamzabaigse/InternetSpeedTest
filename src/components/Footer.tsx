@@ -42,7 +42,6 @@ export const Footer: React.FC = () => {
               <li><Link href="/valorant-ping-checker" className="hover:text-cyan-400 transition">Valorant Ping Checker (Riot US/EU)</Link></li>
               <li><Link href="/roblox-latency-test" className="hover:text-cyan-400 transition">Roblox Latency Diagnostic</Link></li>
               <li><Link href="/fortnite-packet-loss-diagnostic" className="hover:text-cyan-400 transition">Fortnite Packet Loss Matrix</Link></li>
-              <li><Link href="/valorant-ping-checker" className="hover:text-cyan-400 transition">Warzone & CS2 Latency Map</Link></li>
             </ul>
           </div>
 
@@ -61,8 +60,8 @@ export const Footer: React.FC = () => {
         <div className="border-t border-slate-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500">
           <div>© {new Date().getFullYear()} SpeedNetHub. All rights reserved. Designed for maximum ad viewability & network transparency.</div>
           <div className="flex gap-4 mt-2 sm:mt-0">
-            <Link href="/" className="hover:text-slate-400">Privacy Policy</Link>
-            <Link href="/" className="hover:text-slate-400">Terms of Service</Link>
+            <Link href="/privacy-policy" className="hover:text-slate-400">Privacy Policy</Link>
+            <Link href="/terms-of-service" className="hover:text-slate-400">Terms of Service</Link>
             <Link href="/isp" className="hover:text-slate-400">ISP Directory</Link>
           </div>
         </div>
