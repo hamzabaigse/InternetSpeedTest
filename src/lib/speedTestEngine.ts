@@ -110,7 +110,7 @@ export async function runFullDiagnostic(
     unit: 'Mbps' | 'MB/s' | 'ms' | 'Score' = 'Mbps'
   ) => {
     if (unit === 'Mbps' || unit === 'MB/s') {
-      if (emaSpeed === 0) emaSpeed = liveSpeedMbps;
+      if (emaSpeed === 0 || liveSpeedMbps === 0) emaSpeed = liveSpeedMbps;
       else emaSpeed = EMA_ALPHA * liveSpeedMbps + (1 - EMA_ALPHA) * emaSpeed;
     } else {
       emaSpeed = liveSpeedMbps;
@@ -242,11 +242,12 @@ export async function runFullDiagnostic(
   result.isThrottlingLikely = false;
 
   // --------------------------------------------------------------------------
-  // STEP 3: SEQUENTIAL UPLOAD SPEED TEST
+  // STEP 3: SEQUENTIAL UPLOAD SPEED TEST (Reset needle to 0.00 first)
   // --------------------------------------------------------------------------
+  emaSpeed = 0; // Reset speed needle & HUD gauge back to 0.00
   notifyProgress('Starting Upload Speed Test...', 'STAGE_UPLOAD', 48, 0, 'Mbps');
+  await new Promise(r => setTimeout(r, 450)); // Brief pause at 0.00 before upload sweep begins
 
-  emaSpeed = 0;
   const uploadSamplesMbps: number[] = [];
   const UPLOAD_DURATION_MS = 5500;
   const uploadStart = performance.now();

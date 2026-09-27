@@ -21,6 +21,15 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentAnglePercentRef = useRef<number>(0);
+  const prevPhaseRef = useRef<string>(activePhase);
+
+  // Whenever activePhase changes (e.g., switching from download to upload), reset needle to 0!
+  useEffect(() => {
+    if (prevPhaseRef.current !== activePhase) {
+      currentAnglePercentRef.current = 0;
+      prevPhaseRef.current = activePhase;
+    }
+  }, [activePhase]);
 
   // Compute display speed based on unit choice
   const displayVal = unitMode === 'MBps' ? valueMbps / 8 : valueMbps;
@@ -61,7 +70,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
 
       // Smooth LERP spring physics on needle angle
       currentAnglePercentRef.current += (targetPercent - currentAnglePercentRef.current) * 0.18;
-      const currentPercent = currentAnglePercentRef.current;
+      const currentPercent = Math.max(0, currentAnglePercentRef.current);
 
       const activeAngle = startAngle + (endAngle - startAngle) * currentPercent;
 
@@ -84,7 +93,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Ticks adapted dynamically according to unit mode choice!
+      // Ticks adapted dynamically according to unit mode choice
       const ticks = unitMode === 'MBps'
         ? [
             { label: '0', valMbps: 0 },
