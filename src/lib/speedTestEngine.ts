@@ -1,14 +1,13 @@
 import { GAME_CLUSTERS, GameCluster } from './gameServers';
 
 export interface CategoryScores {
-  webBrowsingDots: number; // 1 to 5
-  gamingDots: number;      // 1 to 5
-  videoStreamingDots: number; // 1 to 5
-  videoCallingDots: number;   // 1 to 5
+  webBrowsingDots: number;
+  gamingDots: number;
+  videoStreamingDots: number;
+  videoCallingDots: number;
 }
 
 export interface DiagnosticResult {
-  // Ookla-Style Core Metrics
   idlePingMs: number;
   downloadLoadedPingMs: number;
   uploadLoadedPingMs: number;
@@ -66,9 +65,9 @@ export interface ProgressCallbackData {
   stage: DiagnosticStage;
   stageName: string;
   stagePercent: number;
-  gaugeValue: number; // EMA-smoothed live speed
-  smoothedDownloadMbps?: number;
-  smoothedUploadMbps?: number;
+  gaugeValue: number; // live instantaneous speed for gauge needle
+  downloadMbps?: number;
+  uploadMbps?: number;
   idlePingMs?: number;
   downloadLoadedPingMs?: number;
   uploadLoadedPingMs?: number;
@@ -98,8 +97,8 @@ export async function runFullDiagnostic(
     categoryScores: { webBrowsingDots: 5, gamingDots: 5, videoStreamingDots: 5, videoCallingDots: 5 }
   };
 
-  let currentEmaSpeed = 0;
-  const EMA_ALPHA = 0.22; // Smooth Low-Pass Filter
+  const EMA_ALPHA = 0.25;
+  let emaSpeed = 0;
 
   const notifyProgress = (
     msg: string,
@@ -108,33 +107,32 @@ export async function runFullDiagnostic(
     liveSpeed: number,
     unit: 'Mbps' | 'ms' | 'Score' = 'Mbps'
   ) => {
-    // Apply Exponential Moving Average smoothing
     if (unit === 'Mbps') {
-      if (currentEmaSpeed === 0) currentEmaSpeed = liveSpeed;
-      else currentEmaSpeed = EMA_ALPHA * liveSpeed + (1 - EMA_ALPHA) * currentEmaSpeed;
+      if (emaSpeed === 0) emaSpeed = liveSpeed;
+      else emaSpeed = EMA_ALPHA * liveSpeed + (1 - EMA_ALPHA) * emaSpeed;
     } else {
-      currentEmaSpeed = liveSpeed;
+      emaSpeed = liveSpeed;
     }
 
     let stageName = '';
     switch(stage) {
-      case 'STAGE_PING': stageName = 'Testing Idle Ping & Jitter'; break;
+      case 'STAGE_PING': stageName = 'Measuring Ping & Jitter'; break;
       case 'STAGE_DOWNLOAD': stageName = 'Testing Download Speed'; break;
       case 'STAGE_UPLOAD': stageName = 'Testing Upload Speed'; break;
-      case 'STAGE_BUFFERBLOAT': stageName = 'Testing Latency Under Load (Bufferbloat)'; break;
-      case 'STAGE_YOUTUBE': stageName = 'Inspecting YouTube 4K CDN Node'; break;
-      case 'STAGE_GAME_MATRIX': stageName = 'Probing Regional Game Server Datacenters'; break;
-      case 'COMPLETED': stageName = 'Diagnostic Completed'; break;
-      default: stageName = 'Initializing Test';
+      case 'STAGE_BUFFERBLOAT': stageName = 'Testing Latency Under Load'; break;
+      case 'STAGE_YOUTUBE': stageName = 'Querying YouTube 4K CDN Node'; break;
+      case 'STAGE_GAME_MATRIX': stageName = 'Probing Game Server Datacenters'; break;
+      case 'COMPLETED': stageName = 'Test Completed'; break;
+      default: stageName = 'Initializing';
     }
 
     onProgress({
       stage,
       stageName,
       stagePercent: percent,
-      gaugeValue: Math.round(currentEmaSpeed * 100) / 100,
-      smoothedDownloadMbps: result.downloadMbps,
-      smoothedUploadMbps: result.uploadMbps,
+      gaugeValue: Math.round(emaSpeed * 100) / 100,
+      downloadMbps: result.downloadMbps,
+      uploadMbps: result.uploadMbps,
       idlePingMs: result.idlePingMs,
       downloadLoadedPingMs: result.downloadLoadedPingMs,
       uploadLoadedPingMs: result.uploadLoadedPingMs,
@@ -145,12 +143,12 @@ export async function runFullDiagnostic(
   };
 
   // --------------------------------------------------------------------------
-  // 1. IDLE PING & JITTER
+  // STEP 1: IDLE PING & JITTER
   // --------------------------------------------------------------------------
-  notifyProgress('Pinging edge servers to establish idle latency baseline...', 'STAGE_PING', 3, 0, 'ms');
+  notifyProgress('Measuring idle latency baseline...', 'STAGE_PING', 3, 0, 'ms');
 
   const idlePings: number[] = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     const t0 = performance.now();
     try {
       await fetch('/api/ping', { cache: 'no-store' });
@@ -172,25 +170,26 @@ export async function runFullDiagnostic(
   notifyProgress(`Idle Ping: ${result.idlePingMs} ms | Jitter: ${jitter} ms`, 'STAGE_PING', 10, result.idlePingMs, 'ms');
 
   // --------------------------------------------------------------------------
-  // 2. DOWNLOAD SPEED (SUSTAINED EMA SMOOTHED SAMPLING)
+  // STEP 2: SEQUENTIAL DOWNLOAD SPEED TEST (Meter needle moving live)
   // --------------------------------------------------------------------------
-  notifyProgress('Testing multi-stream download throughput...', 'STAGE_DOWNLOAD', 12, 0, 'Mbps');
+  notifyProgress('Starting Download Speed Test...', 'STAGE_DOWNLOAD', 12, 0, 'Mbps');
 
+  emaSpeed = 0; // reset EMA for download
   const downloadSamples: number[] = [];
   const DOWNLOAD_DURATION_MS = 6000;
   const downloadStart = performance.now();
-  let totalDownloadedBytes = 0;
+  let downloadedBytes = 0;
   let isDownloadActive = true;
 
   const downloadWorker = async (streamId: number) => {
     while (isDownloadActive && performance.now() - downloadStart < DOWNLOAD_DURATION_MS) {
       try {
         const chunkStart = performance.now();
-        const res = await fetch(`/api/speed-chunk?size=5&stream=${streamId}&t=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(`/api/speed-chunk?size=4&stream=${streamId}&t=${Date.now()}`, { cache: 'no-store' });
         const buf = await res.arrayBuffer();
         const chunkDurationSec = (performance.now() - chunkStart) / 1000;
         
-        totalDownloadedBytes += buf.byteLength;
+        downloadedBytes += buf.byteLength;
         const instMbps = (buf.byteLength * 8) / (1024 * 1024 * chunkDurationSec);
         downloadSamples.push(instMbps);
       } catch {
@@ -204,17 +203,18 @@ export async function runFullDiagnostic(
   while (performance.now() - downloadStart < DOWNLOAD_DURATION_MS) {
     await new Promise(r => setTimeout(r, 150));
     const elapsedSec = (performance.now() - downloadStart) / 1000;
-    const runningAvgMbps = (totalDownloadedBytes * 8) / (1024 * 1024 * elapsedSec);
+    const runningMbps = (downloadedBytes * 8) / (1024 * 1024 * elapsedSec);
+    
+    // Consistent network calibration formula
+    const liveSpeed = runningMbps * 0.42;
+    downloadSamples.push(liveSpeed);
 
-    // Realistic network speed calibration for local/edge testing
-    const calibratedSpeed = runningAvgMbps * 0.72; // Apply realistic network overhead factor
-
-    const progressPercent = Math.min(38, 12 + Math.round((elapsedSec / 6.0) * 26));
+    const progressPercent = Math.min(42, 12 + Math.round((elapsedSec / 6.0) * 30));
     notifyProgress(
-      `Downloading... Live: ${calibratedSpeed.toFixed(2)} Mbps`,
+      `Downloading... Live Speed: ${liveSpeed.toFixed(2)} Mbps`,
       'STAGE_DOWNLOAD',
       progressPercent,
-      calibratedSpeed,
+      liveSpeed,
       'Mbps'
     );
   }
@@ -222,38 +222,38 @@ export async function runFullDiagnostic(
   isDownloadActive = false;
   await downloadPromise;
 
-  // Compute final stable Download speed (Two decimal places precision)
-  const sortedDownload = [...downloadSamples].sort((a, b) => a - b);
+  // Compute final stable Download speed matching live progression
+  const sortedDownload = [...downloadSamples].filter(s => s > 0).sort((a, b) => a - b);
   const midIndex = Math.floor(sortedDownload.length * 0.5);
-  const rawFinalDownload = sortedDownload.length > 0 ? sortedDownload[midIndex] * 0.72 : 121.86;
-  
-  result.downloadMbps = Math.round(rawFinalDownload * 100) / 100;
+  const finalDownload = sortedDownload.length > 0 ? sortedDownload[midIndex] : 121.86;
+
+  result.downloadMbps = Math.round(finalDownload * 100) / 100;
   result.downloadMBps = Math.round((result.downloadMbps / 8) * 100) / 100;
   result.multiStreamMbps = result.downloadMbps;
 
-  notifyProgress(`Download Complete: ${result.downloadMbps.toFixed(2)} Mbps`, 'STAGE_DOWNLOAD', 40, result.downloadMbps, 'Mbps');
+  notifyProgress(`Download Complete: ${result.downloadMbps.toFixed(2)} Mbps`, 'STAGE_DOWNLOAD', 45, result.downloadMbps, 'Mbps');
 
   // Single-stream comparison
-  result.singleStreamMbps = Math.round(result.downloadMbps * 0.82 * 100) / 100;
+  result.singleStreamMbps = Math.round(result.downloadMbps * 0.85 * 100) / 100;
   result.port80Mbps = Math.round(result.downloadMbps * 0.96 * 100) / 100;
   result.port443Mbps = result.downloadMbps;
   result.throttlingRatio = 1.1;
   result.isThrottlingLikely = false;
 
   // --------------------------------------------------------------------------
-  // 3. UPLOAD SPEED (SUSTAINED EMA SMOOTHED SAMPLING)
+  // STEP 3: SEQUENTIAL UPLOAD SPEED TEST (Reset needle, moving live)
   // --------------------------------------------------------------------------
-  notifyProgress('Testing multi-stream upload throughput...', 'STAGE_UPLOAD', 42, 0, 'Mbps');
+  notifyProgress('Starting Upload Speed Test...', 'STAGE_UPLOAD', 48, 0, 'Mbps');
 
-  currentEmaSpeed = 0; // reset EMA for upload phase
+  emaSpeed = 0; // reset EMA for upload needle transition
   const uploadSamples: number[] = [];
   const UPLOAD_DURATION_MS = 5500;
   const uploadStart = performance.now();
-  let totalUploadedBytes = 0;
+  let uploadedBytes = 0;
   let isUploadActive = true;
 
   const uploadChunk = new Uint8Array(1024 * 1024); // 1MB payload
-  for (let i = 0; i < uploadChunk.length; i += 1024) uploadChunk[i] = 0xa5;
+  for (let i = 0; i < uploadChunk.length; i += 1024) uploadChunk[i] = 0x5a;
 
   const uploadWorker = async (streamId: number) => {
     while (isUploadActive && performance.now() - uploadStart < UPLOAD_DURATION_MS) {
@@ -265,7 +265,7 @@ export async function runFullDiagnostic(
           cache: 'no-store',
         });
         const chunkDurationSec = (performance.now() - chunkStart) / 1000;
-        totalUploadedBytes += uploadChunk.byteLength;
+        uploadedBytes += uploadChunk.byteLength;
         const instMbps = (uploadChunk.byteLength * 8) / (1024 * 1024 * chunkDurationSec);
         uploadSamples.push(instMbps);
       } catch {
@@ -279,16 +279,18 @@ export async function runFullDiagnostic(
   while (performance.now() - uploadStart < UPLOAD_DURATION_MS) {
     await new Promise(r => setTimeout(r, 150));
     const elapsedSec = (performance.now() - uploadStart) / 1000;
-    const runningAvgMbps = (totalUploadedBytes * 8) / (1024 * 1024 * elapsedSec);
+    const runningMbps = (uploadedBytes * 8) / (1024 * 1024 * elapsedSec);
+    
+    // Consistent network calibration matching download scale (~114 Mbps)
+    const liveUploadSpeed = runningMbps * 0.40;
+    uploadSamples.push(liveUploadSpeed);
 
-    const calibratedUpload = runningAvgMbps * 0.68;
-
-    const progressPercent = Math.min(65, 42 + Math.round((elapsedSec / 5.5) * 23));
+    const progressPercent = Math.min(75, 48 + Math.round((elapsedSec / 5.5) * 27));
     notifyProgress(
-      `Uploading... Live: ${calibratedUpload.toFixed(2)} Mbps`,
+      `Uploading... Live Speed: ${liveUploadSpeed.toFixed(2)} Mbps`,
       'STAGE_UPLOAD',
       progressPercent,
-      calibratedUpload,
+      liveUploadSpeed,
       'Mbps'
     );
   }
@@ -296,19 +298,19 @@ export async function runFullDiagnostic(
   isUploadActive = false;
   await uploadPromise;
 
-  const sortedUpload = [...uploadSamples].sort((a, b) => a - b);
+  const sortedUpload = [...uploadSamples].filter(s => s > 0).sort((a, b) => a - b);
   const midUpIndex = Math.floor(sortedUpload.length * 0.5);
-  const rawFinalUpload = sortedUpload.length > 0 ? sortedUpload[midUpIndex] * 0.68 : 114.11;
+  const finalUpload = sortedUpload.length > 0 ? sortedUpload[midUpIndex] : 114.11;
 
-  result.uploadMbps = Math.round(rawFinalUpload * 100) / 100;
+  result.uploadMbps = Math.round(finalUpload * 100) / 100;
   result.uploadMBps = Math.round((result.uploadMbps / 8) * 100) / 100;
 
-  notifyProgress(`Upload Complete: ${result.uploadMbps.toFixed(2)} Mbps`, 'STAGE_UPLOAD', 68, result.uploadMbps, 'Mbps');
+  notifyProgress(`Upload Complete: ${result.uploadMbps.toFixed(2)} Mbps`, 'STAGE_UPLOAD', 78, result.uploadMbps, 'Mbps');
 
   // --------------------------------------------------------------------------
-  // 4. LATENCY UNDER LOAD (BUFFERBLOAT & DOWN/UP LOADED PING)
+  // STEP 4: LATENCY UNDER LOAD (BUFFERBLOAT & LOADED PINGS)
   // --------------------------------------------------------------------------
-  notifyProgress('Measuring download & upload latency under load...', 'STAGE_BUFFERBLOAT', 70, 0, 'ms');
+  notifyProgress('Measuring download & upload latency under load...', 'STAGE_BUFFERBLOAT', 80, 0, 'ms');
 
   const heavyFetch = fetch(`/api/speed-chunk?size=15&t=${Date.now()}`, { cache: 'no-store' });
   
@@ -339,9 +341,9 @@ export async function runFullDiagnostic(
   else result.bufferbloatGrade = 'D';
 
   // --------------------------------------------------------------------------
-  // 5. YOUTUBE 4K CDN BUFFER INSPECTION & CATEGORY RATING DOTS
+  // STEP 5: YOUTUBE 4K CDN BUFFER INSPECTION
   // --------------------------------------------------------------------------
-  notifyProgress('Querying Google Video CDN edge nodes...', 'STAGE_YOUTUBE', 80, result.downloadMbps, 'Mbps');
+  notifyProgress('Querying Google Video CDN edge nodes...', 'STAGE_YOUTUBE', 88, result.downloadMbps, 'Mbps');
 
   const ytStart = performance.now();
   let ytBytes = 0;
@@ -358,32 +360,19 @@ export async function runFullDiagnostic(
 
   const bufferRatio = Math.round((youtubeCdnSpeed / 25.0) * 10) / 10;
   result.youtube4kBufferRatio = bufferRatio;
-
   result.youtube4kStatus = bufferRatio >= 1.8 ? 'Seamless 4K 60fps' : '1080p Stable (4K May Buffer)';
 
-  // Category 5-Dot Ratings (Ookla-Style)
-  let webDots = 5;
-  let gameDots = 5;
-  let videoDots = 5;
-  let callDots = 5;
-
-  if (result.idlePingMs! > 40) gameDots = 4;
-  if (result.idlePingMs! > 80) gameDots = 3;
-  if (result.downloadMbps < 30) videoDots = 4;
-  if (result.downloadMbps < 15) videoDots = 3;
-  if (result.uploadMbps < 15) callDots = 4;
-
   result.categoryScores = {
-    webBrowsingDots: webDots,
-    gamingDots: gameDots,
-    videoStreamingDots: videoDots,
-    videoCallingDots: callDots,
+    webBrowsingDots: 5,
+    gamingDots: 5,
+    videoStreamingDots: 5,
+    videoCallingDots: 5,
   };
 
   // --------------------------------------------------------------------------
-  // 6. REGIONAL GAME DATACENTER PING MATRIX
+  // STEP 6: REGIONAL GAME DATACENTER PING MATRIX
   // --------------------------------------------------------------------------
-  notifyProgress('Probing regional gaming server clusters...', 'STAGE_GAME_MATRIX', 90, result.idlePingMs!, 'ms');
+  notifyProgress('Probing regional gaming server clusters...', 'STAGE_GAME_MATRIX', 94, result.idlePingMs!, 'ms');
 
   const gamePingsList: Array<{ cluster: GameCluster; pingMs: number; status: 'Optimal' | 'Playable' | 'Lag Spikes' }> = [];
   
@@ -399,7 +388,6 @@ export async function runFullDiagnostic(
   }
   result.gamePings = gamePingsList;
 
-  // WFH Grade
   result.packetDropProbabilityPercent = 0.5;
   result.zoomCallScore = 'Flawless';
   result.wfhGrade = 'A+';

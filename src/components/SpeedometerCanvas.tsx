@@ -2,13 +2,15 @@
 
 import React, { useEffect, useRef } from 'react';
 import { speedToLogScalePercent } from '@/lib/speedTestEngine';
+import { ArrowDownCircle, ArrowUpCircle, Zap } from 'lucide-react';
 
 interface SpeedometerCanvasProps {
-  value: number; // live speed or value
+  value: number; // live speed or ping value
   unit?: string;
   isTesting: boolean;
   stageName?: string;
   displayMode?: 'Mbps' | 'MBps';
+  activePhase?: 'download' | 'upload' | 'ping' | 'other';
 }
 
 export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
@@ -17,10 +19,9 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
   isTesting,
   stageName = 'Ready',
   displayMode = 'Mbps',
+  activePhase = 'download',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Smooth needle animation state (Linear Interpolation LERP)
   const currentAnglePercentRef = useRef<number>(0);
 
   const displayVal = displayMode === 'MBps' && unit === 'Mbps' ? value / 8 : value;
@@ -33,67 +34,56 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
     if (!ctx) return;
 
     let animationFrameId: number;
-    let waveOffset = 0;
 
     const render = () => {
       const width = canvas.width;
       const height = canvas.height;
       const centerX = width / 2;
-      const centerY = height * 0.62;
-      const radius = Math.min(width, height) * 0.42;
+      const centerY = height * 0.72;
+      const radius = Math.min(width, height) * 0.44;
 
       ctx.clearRect(0, 0, width, height);
-
-      // Telemetry background wave
-      if (isTesting) {
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
-        ctx.lineWidth = 2;
-        waveOffset += 0.04;
-        for (let x = 0; x < width; x += 5) {
-          const y = height * 0.82 + Math.sin(x * 0.02 + waveOffset) * 10;
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
 
       const startAngle = Math.PI * 0.82;
       const endAngle = Math.PI * 2.18;
 
-      // Outer track arc
+      // Outer track background arc
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 16;
+      ctx.strokeStyle = '#172033'; // sleek dark slate
+      ctx.lineWidth = 18;
       ctx.lineCap = 'round';
       ctx.stroke();
 
       // Target percent using logarithmic scale mapping
       const targetPercent = unit === 'Mbps' ? speedToLogScalePercent(value) : Math.min(1.0, value / 200);
 
-      // Smooth LERP (spring physics on needle angle)
-      currentAnglePercentRef.current += (targetPercent - currentAnglePercentRef.current) * 0.15;
+      // Smooth LERP spring physics on needle angle
+      currentAnglePercentRef.current += (targetPercent - currentAnglePercentRef.current) * 0.18;
       const currentPercent = currentAnglePercentRef.current;
 
       const activeAngle = startAngle + (endAngle - startAngle) * currentPercent;
 
-      // Draw glowing active progress gradient
+      // Draw glowing active progress gradient arc
       if (currentPercent > 0.001) {
         const gradient = ctx.createLinearGradient(0, 0, width, 0);
-        gradient.addColorStop(0, '#06b6d4');
-        gradient.addColorStop(0.5, '#3b82f6');
-        gradient.addColorStop(1, '#8b5cf6');
+        if (activePhase === 'upload') {
+          gradient.addColorStop(0, '#a855f7'); // purple
+          gradient.addColorStop(1, '#ec4899'); // pink
+        } else {
+          gradient.addColorStop(0, '#06b6d4'); // cyan
+          gradient.addColorStop(1, '#3b82f6'); // blue
+        }
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, startAngle, activeAngle);
         ctx.strokeStyle = gradient;
-        ctx.lineWidth = 16;
+        ctx.lineWidth = 18;
         ctx.lineCap = 'round';
         ctx.stroke();
       }
 
-      // Ookla Logarithmic Tick Marks: 0, 5, 10, 50, 100, 250, 500, 750, 1000
+      // Clean Logarithmic Tick Marks & Dial Clock Numbers (0, 5, 10, 50, 100, 250, 500, 750, 1000)
       const ticks = [
         { label: '0', val: 0 },
         { label: '5', val: 5 },
@@ -109,7 +99,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       ticks.forEach((tick) => {
         const p = speedToLogScalePercent(tick.val);
         const a = startAngle + (endAngle - startAngle) * p;
-        const innerR = radius - 18;
+        const innerR = radius - 16;
         const outerR = radius - 24;
 
         const x1 = centerX + Math.cos(a) * innerR;
@@ -121,40 +111,40 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = '#475569';
+        ctx.strokeStyle = '#334155';
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Tick Label Text
-        const textR = radius - 36;
+        // Clock Number Label Text
+        const textR = radius - 38;
         const tx = centerX + Math.cos(a) * textR;
         const ty = centerY + Math.sin(a) * textR;
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 10px system-ui, sans-serif';
+        ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(tick.label, tx, ty);
       });
 
-      // Draw Needle
-      const needleX = centerX + Math.cos(activeAngle) * (radius - 8);
-      const needleY = centerY + Math.sin(activeAngle) * (radius - 8);
+      // Draw Sleek Needle
+      const needleX = centerX + Math.cos(activeAngle) * (radius - 10);
+      const needleY = centerY + Math.sin(activeAngle) * (radius - 10);
 
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.lineTo(needleX, needleY);
-      ctx.strokeStyle = isTesting ? '#06b6d4' : '#94a3b8';
+      ctx.strokeStyle = activePhase === 'upload' ? '#c084fc' : '#38bdf8';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Knob
+      // Dark Metallic Knob Center
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
       ctx.fillStyle = '#0f172a';
       ctx.fill();
-      ctx.strokeStyle = '#06b6d4';
+      ctx.strokeStyle = activePhase === 'upload' ? '#c084fc' : '#38bdf8';
       ctx.lineWidth = 3;
       ctx.stroke();
 
@@ -166,32 +156,39 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [value, isTesting, unit]);
+  }, [value, isTesting, unit, activePhase]);
 
   return (
-    <div className="relative w-full flex flex-col items-center justify-center p-2">
+    <div className="w-full flex flex-col items-center justify-center p-2">
+      {/* Clean & Sleek Dial Face (No text clutter inside dial) */}
       <canvas
         ref={canvasRef}
-        width={360}
-        height={250}
-        className="w-[360px] h-[250px] max-w-full"
+        width={380}
+        height={240}
+        className="w-[380px] h-[240px] max-w-full"
       />
 
-      {/* Digital HUD Display */}
-      <div className="absolute top-[52%] flex flex-col items-center justify-center pointer-events-none text-center">
-        <div className="text-4xl sm:text-5xl font-black text-white tracking-tight flex items-baseline gap-1 font-mono">
+      {/* Prominent Speed Readout Positioned Directly Below Meter */}
+      <div className="flex flex-col items-center justify-center text-center mt-2">
+        {/* Large Speed Number */}
+        <div className="text-4xl sm:text-6xl font-black text-white tracking-tight flex items-baseline gap-2 font-mono">
           <span>{displayVal.toFixed(2)}</span>
-          <span className="text-xs sm:text-sm font-bold text-cyan-400 font-sans">{displayUnit}</span>
+          <span className="text-sm sm:text-base font-bold text-cyan-400 font-sans">{displayUnit}</span>
         </div>
 
+        {/* Megabytes conversion sub-display */}
         {unit === 'Mbps' && (
-          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+          <div className="text-xs text-slate-400 font-mono mt-1">
             ({(value / 8).toFixed(2)} Megabytes/sec)
           </div>
         )}
 
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-300 mt-1.5 bg-slate-900/90 px-3 py-0.5 rounded border border-slate-800">
-          {stageName}
+        {/* Active Stage Indicator Badge */}
+        <div className="mt-3 inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-1 rounded-full text-xs font-bold text-slate-200 shadow-md">
+          {activePhase === 'download' && <ArrowDownCircle className="w-4 h-4 text-cyan-400 animate-bounce" />}
+          {activePhase === 'upload' && <ArrowUpCircle className="w-4 h-4 text-purple-400 animate-bounce" />}
+          {activePhase === 'ping' && <Zap className="w-4 h-4 text-amber-400" />}
+          <span>{stageName}</span>
         </div>
       </div>
     </div>

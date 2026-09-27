@@ -18,6 +18,7 @@ export default function Home() {
   const [stage, setStage] = useState<DiagnosticStage>('IDLE');
   const [progress, setProgress] = useState(0);
   const [gaugeValue, setGaugeValue] = useState(0);
+  
   const [smoothedDownload, setSmoothedDownload] = useState<number | undefined>(undefined);
   const [smoothedUpload, setSmoothedUpload] = useState<number | undefined>(undefined);
   const [idlePing, setIdlePing] = useState<number | undefined>(undefined);
@@ -29,6 +30,13 @@ export default function Home() {
   const [consoleLog, setConsoleLog] = useState<string[]>([]);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [tabRefreshCounter, setTabRefreshCounter] = useState(0);
+
+  const getActivePhase = (): 'download' | 'upload' | 'ping' | 'other' => {
+    if (stage === 'STAGE_DOWNLOAD') return 'download';
+    if (stage === 'STAGE_UPLOAD') return 'upload';
+    if (stage === 'STAGE_PING' || stage === 'STAGE_BUFFERBLOAT') return 'ping';
+    return 'other';
+  };
 
   const startDiagnostic = async () => {
     setIsTesting(true);
@@ -48,8 +56,8 @@ export default function Home() {
         setProgress(data.stagePercent);
         setGaugeValue(data.gaugeValue);
         
-        if (data.smoothedDownloadMbps !== undefined) setSmoothedDownload(data.smoothedDownloadMbps);
-        if (data.smoothedUploadMbps !== undefined) setSmoothedUpload(data.smoothedUploadMbps);
+        if (data.downloadMbps !== undefined) setSmoothedDownload(data.downloadMbps);
+        if (data.uploadMbps !== undefined) setSmoothedUpload(data.uploadMbps);
         if (data.idlePingMs !== undefined) setIdlePing(data.idlePingMs);
         if (data.downloadLoadedPingMs !== undefined) setDownloadLoadedPing(data.downloadLoadedPingMs);
         if (data.uploadLoadedPingMs !== undefined) setUploadLoadedPing(data.uploadLoadedPingMs);
@@ -132,7 +140,7 @@ export default function Home() {
                 <Activity className="w-48 h-48 text-cyan-400" />
               </div>
 
-              {/* Ookla-Inspired Top Header HUD (Download, Upload, Ping, 5-Dot Ratings) */}
+              {/* Ookla-Inspired Top Header HUD (Sequential Live Lock) */}
               <OoklaHeaderHud
                 downloadMbps={result?.downloadMbps ?? smoothedDownload}
                 uploadMbps={result?.uploadMbps ?? smoothedUpload}
@@ -141,20 +149,30 @@ export default function Home() {
                 uploadLoadedPingMs={result?.uploadLoadedPingMs ?? uploadLoadedPing}
                 categoryScores={result?.categoryScores}
                 isTesting={isTesting}
-                stage={stage}
+                activePhase={getActivePhase()}
+                liveGaugeVal={gaugeValue}
               />
 
-              {/* Speedometer Gauge & Start Button */}
+              {/* Clean & Minimal Meter Dial with Speed Below */}
               <div className="flex flex-col items-center justify-center">
                 <SpeedometerCanvas
                   value={gaugeValue}
                   unit={gaugeUnit}
                   displayMode={unitMode}
                   isTesting={isTesting}
-                  stageName={stage === 'IDLE' ? 'Ready' : stage.replace('STAGE_', 'Step ')}
+                  activePhase={getActivePhase()}
+                  stageName={
+                    stage === 'IDLE' 
+                      ? 'Ready' 
+                      : stage === 'STAGE_DOWNLOAD' 
+                      ? 'Testing Download Speed' 
+                      : stage === 'STAGE_UPLOAD' 
+                      ? 'Testing Upload Speed' 
+                      : stage.replace('STAGE_', 'Step ')
+                  }
                 />
 
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                   <button
                     onClick={startDiagnostic}
                     disabled={isTesting}
