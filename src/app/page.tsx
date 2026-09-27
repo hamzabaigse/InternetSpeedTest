@@ -107,37 +107,37 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-8 space-y-6">
             {/* Speedometer Card Container */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-6 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                 <Activity className="w-48 h-48 text-cyan-400" />
               </div>
 
               {/* Prominent Unit Scale Choice Switch Positioned Directly Above Meter */}
-              <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-950/80 border border-slate-800 p-3 rounded-xl mb-6 gap-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-white">
-                  <Settings2 className="w-4 h-4 text-cyan-400" />
+              <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-950/80 border border-slate-800 p-2 sm:p-3 rounded-xl mb-3 sm:mb-6 gap-2 sm:gap-3">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-white">
+                  <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Choose Speed Scale:</span>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-1 flex gap-1 w-full sm:w-auto">
                   <button
                     onClick={() => setUnitMode('Mbps')}
-                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-xs font-extrabold transition ${
+                    className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-extrabold transition ${
                       unitMode === 'Mbps'
                         ? 'bg-cyan-500 text-slate-950 shadow-md glow-cyan'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Mbps (Megabits/s - ISP Plan)
+                    Mbps (Megabits/s)
                   </button>
                   <button
                     onClick={() => setUnitMode('MBps')}
-                    className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-xs font-extrabold transition ${
+                    className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-extrabold transition ${
                       unitMode === 'MBps'
                         ? 'bg-cyan-500 text-slate-950 shadow-md glow-cyan'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    MB/s (Megabytes/s - File Download)
+                    MB/s (Megabytes/s)
                   </button>
                 </div>
               </div>

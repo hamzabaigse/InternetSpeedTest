@@ -63,53 +63,55 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
   );
 
   return (
-    <div className="w-full bg-slate-950/90 border border-slate-800/90 rounded-2xl p-4 sm:p-6 mb-6 shadow-2xl">
-      {/* Header Numbers (DOWNLOAD, UPLOAD, PING) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center border-b border-slate-800/80 pb-6 mb-6 text-center">
+    <div className="w-full bg-slate-950/90 border border-slate-800/90 rounded-2xl p-3 sm:p-6 mb-4 sm:mb-6 shadow-2xl">
+      {/* Header Numbers (DOWNLOAD, UPLOAD, PING) - Compact Side-by-Side Row on Mobile */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-6 items-center border-b border-slate-800/80 pb-3 sm:pb-6 mb-3 sm:mb-6 text-center">
         {/* DOWNLOAD */}
-        <div className={`flex flex-col items-center p-2 rounded-xl transition ${
+        <div className={`flex flex-col items-center p-1.5 sm:p-2 rounded-xl transition ${
           activePhase === 'download' ? 'bg-cyan-950/60 border border-cyan-500/40 glow-cyan' : ''
         }`}>
-          <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-cyan-400">
-            <ArrowDownCircle className={`w-4 h-4 text-cyan-400 ${activePhase === 'download' ? 'animate-bounce' : ''}`} />
-            <span>DOWNLOAD</span>
-            <span className="text-[10px] text-cyan-300 font-mono">{unitLabel}</span>
+          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-cyan-400">
+            <ArrowDownCircle className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 ${activePhase === 'download' ? 'animate-bounce' : ''}`} />
+            <span className="hidden xs:inline sm:inline">DOWNLOAD</span>
+            <span className="xs:hidden sm:hidden">DOWN</span>
+            <span className="text-[9px] sm:text-[10px] text-cyan-300 font-mono">{unitLabel}</span>
           </div>
-          <div className="text-3xl sm:text-5xl font-black text-white font-mono mt-1 tracking-tight">
+          <div className="text-xl sm:text-5xl font-black text-white font-mono mt-0.5 sm:mt-1 tracking-tight">
             {displayDownload}
           </div>
         </div>
 
         {/* UPLOAD */}
-        <div className={`flex flex-col items-center p-2 rounded-xl transition ${
+        <div className={`flex flex-col items-center p-1.5 sm:p-2 rounded-xl transition ${
           activePhase === 'upload' ? 'bg-purple-950/60 border border-purple-500/40' : ''
         }`}>
-          <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-purple-400">
-            <ArrowUpCircle className={`w-4 h-4 text-purple-400 ${activePhase === 'upload' ? 'animate-bounce' : ''}`} />
-            <span>UPLOAD</span>
-            <span className="text-[10px] text-purple-300 font-mono">{unitLabel}</span>
+          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-purple-400">
+            <ArrowUpCircle className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 ${activePhase === 'upload' ? 'animate-bounce' : ''}`} />
+            <span className="hidden xs:inline sm:inline">UPLOAD</span>
+            <span className="xs:hidden sm:hidden">UP</span>
+            <span className="text-[9px] sm:text-[10px] text-purple-300 font-mono">{unitLabel}</span>
           </div>
-          <div className="text-3xl sm:text-5xl font-black text-white font-mono mt-1 tracking-tight">
+          <div className="text-xl sm:text-5xl font-black text-white font-mono mt-0.5 sm:mt-1 tracking-tight">
             {displayUpload}
           </div>
         </div>
 
         {/* PING */}
-        <div className="flex flex-col items-center">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-            Ping <span className="text-[10px] lowercase text-slate-500">ms</span>
+        <div className="flex flex-col items-center p-1.5 sm:p-2">
+          <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mb-0.5 sm:mb-1">
+            Ping <span className="text-[9px] lowercase text-slate-500">ms</span>
           </div>
-          <div className="flex items-center justify-center gap-4 text-sm font-mono font-bold">
-            <div className="flex items-center gap-1 text-amber-400">
-              <Zap className="w-3.5 h-3.5 fill-amber-400" />
+          <div className="flex items-center justify-center gap-1.5 sm:gap-4 text-xs sm:text-sm font-mono font-bold">
+            <div className="flex items-center gap-0.5 text-amber-400">
+              <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-amber-400" />
               <span>{idlePingMs !== undefined ? idlePingMs : '--'}</span>
             </div>
-            <div className="flex items-center gap-1 text-cyan-400">
-              <ArrowDownCircle className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-0.5 text-cyan-400">
+              <ArrowDownCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               <span>{downloadLoadedPingMs !== undefined ? downloadLoadedPingMs : '--'}</span>
             </div>
-            <div className="flex items-center gap-1 text-purple-400">
-              <ArrowUpCircle className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-0.5 text-purple-400">
+              <ArrowUpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               <span>{uploadLoadedPingMs !== undefined ? uploadLoadedPingMs : '--'}</span>
             </div>
           </div>

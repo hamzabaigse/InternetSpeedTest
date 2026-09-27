@@ -179,32 +179,32 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
   }, [valueMbps, isTesting, unitMode, activePhase]);
 
   return (
-    <div className="w-full flex flex-col items-center justify-center p-2">
-      {/* Sleek Dial Face */}
+    <div className="w-full flex flex-col items-center justify-center p-1 sm:p-2">
+      {/* Sleek Ookla-Style Dial Face */}
       <canvas
         ref={canvasRef}
         width={380}
         height={240}
-        className="w-[380px] h-[240px] max-w-full"
+        className="w-full max-w-[310px] sm:max-w-[380px] h-[195px] sm:h-[240px]"
       />
 
       {/* Speed Readout Below Meter */}
-      <div className="flex flex-col items-center justify-center text-center mt-2">
-        <div className="text-4xl sm:text-6xl font-black text-white tracking-tight flex items-baseline gap-2 font-mono">
+      <div className="flex flex-col items-center justify-center text-center mt-1 sm:mt-2">
+        <div className="text-3xl sm:text-5xl font-black text-white tracking-tight flex items-baseline gap-1.5 font-mono">
           <span>{displayVal.toFixed(2)}</span>
-          <span className="text-sm sm:text-base font-bold text-cyan-400 font-sans">{displayUnit}</span>
+          <span className="text-xs sm:text-base font-bold text-cyan-400 font-sans">{displayUnit}</span>
         </div>
 
         {/* Dual Conversion Subtitle */}
-        <div className="text-xs text-slate-400 font-mono mt-1">
+        <div className="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
           ({altVal.toFixed(2)} {altUnit})
         </div>
 
         {/* Active Stage Badge */}
-        <div className="mt-3 inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-1 rounded-full text-xs font-bold text-slate-200 shadow-md">
-          {activePhase === 'download' && <ArrowDownCircle className="w-4 h-4 text-cyan-400 animate-bounce" />}
-          {activePhase === 'upload' && <ArrowUpCircle className="w-4 h-4 text-purple-400 animate-bounce" />}
-          {activePhase === 'ping' && <Zap className="w-4 h-4 text-amber-400" />}
+        <div className="mt-2.5 inline-flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 sm:px-4 py-1 rounded-full text-[11px] sm:text-xs font-bold text-slate-200 shadow-md">
+          {activePhase === 'download' && <ArrowDownCircle className="w-3.5 h-3.5 text-cyan-400 animate-bounce" />}
+          {activePhase === 'upload' && <ArrowUpCircle className="w-3.5 h-3.5 text-purple-400 animate-bounce" />}
+          {activePhase === 'ping' && <Zap className="w-3.5 h-3.5 text-amber-400" />}
           <span>{stageName} ({displayUnit})</span>
         </div>
       </div>
