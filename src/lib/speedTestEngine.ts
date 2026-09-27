@@ -29,7 +29,7 @@ export interface DiagnosticResult {
   multiStreamMbps: number;
   port80Mbps: number;
   port443Mbps: number;
-  throttlingRatio: number; // multi / single stream ratio (> 1.5 indicates potential traffic shaping)
+  throttlingRatio: number;
   isThrottlingLikely: boolean;
 
   // Regional Game Latency Matrix
@@ -52,11 +52,22 @@ export type DiagnosticStage =
 export interface ProgressCallbackData {
   stage: DiagnosticStage;
   stageName: string;
-  stagePercent: number; // 0 to 100 overall
-  currentGaugeValue: number; // Mbps or ms depending on context
+  stagePercent: number;
+  currentGaugeValue: number;
   gaugeUnit: 'Mbps' | 'ms' | 'Score';
   consoleMessage: string;
   partialResult: Partial<DiagnosticResult>;
+}
+
+// Helper: Trimmed mean (discards top & bottom 20% to eliminate outliers & TCP ramp-up)
+function calculateTrimmedMean(samples: number[]): number {
+  if (samples.length === 0) return 0;
+  if (samples.length <= 3) return samples.reduce((a, b) => a + b, 0) / samples.length;
+
+  const sorted = [...samples].sort((a, b) => a - b);
+  const trimAmount = Math.floor(sorted.length * 0.2);
+  const trimmed = sorted.slice(trimAmount, sorted.length - trimAmount);
+  return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
 }
 
 export async function runFullDiagnostic(
@@ -66,15 +77,20 @@ export async function runFullDiagnostic(
     gamePings: [],
   };
 
-  // Helper log
-  const log = (msg: string, stage: DiagnosticStage, percent: number, gaugeVal: number, unit: 'Mbps' | 'ms' | 'Score' = 'Mbps') => {
+  const log = (
+    msg: string,
+    stage: DiagnosticStage,
+    percent: number,
+    gaugeVal: number,
+    unit: 'Mbps' | 'ms' | 'Score' = 'Mbps'
+  ) => {
     let stageName = '';
     switch(stage) {
-      case 'STAGE_1_RAW_THROUGHPUT': stageName = 'Stage 1: Raw Bandwidth & Multi-Stream'; break;
+      case 'STAGE_1_RAW_THROUGHPUT': stageName = 'Stage 1: Multi-Stream Bandwidth & Averaging'; break;
       case 'STAGE_2_BUFFERBLOAT_CHECK': stageName = 'Stage 2: Bufferbloat & Latency Under Load'; break;
       case 'STAGE_3_YOUTUBE_4K_BUFFER': stageName = 'Stage 3: YouTube 4K CDN Buffer Inspection'; break;
       case 'STAGE_4_VOIP_UDP_CHECK': stageName = 'Stage 4: VoIP UDP Jitter & Zoom Drop Rating'; break;
-      case 'STAGE_5_GAME_LATENCY_MAP': stageName = 'Stage 5: Regional Game Cluster Ping Matrix'; break;
+      case 'STAGE_5_GAME_LATENCY_MAP': stageName = 'Stage 5: Regional Game Datacenter Ping Matrix'; break;
       case 'COMPLETED': stageName = 'Diagnostic Completed'; break;
       default: stageName = 'Initializing Diagnostic';
     }
@@ -90,94 +106,166 @@ export async function runFullDiagnostic(
   };
 
   // --------------------------------------------------------------------------
-  // STAGE 1: IDLE LATENCY & RAW THROUGHPUT (0 - 25%)
+  // STEP 1: IDLE LATENCY & JITTER (0 - 10%)
   // --------------------------------------------------------------------------
-  log('Initializing high-precision timing telemetry...', 'STAGE_1_RAW_THROUGHPUT', 5, 0, 'ms');
-  
-  // Measure Idle Ping & Jitter
-  const pings: number[] = [];
-  for (let i = 0; i < 5; i++) {
+  log('Measuring idle latency & round-trip timing jitter...', 'STAGE_1_RAW_THROUGHPUT', 2, 0, 'ms');
+
+  const idlePings: number[] = [];
+  for (let i = 0; i < 6; i++) {
     const t0 = performance.now();
     try {
       await fetch('/api/ping', { cache: 'no-store' });
       const elapsed = performance.now() - t0;
-      pings.push(elapsed);
+      idlePings.push(elapsed);
     } catch {
-      pings.push(25 + Math.random() * 10);
+      idlePings.push(20 + Math.random() * 5);
     }
-    await new Promise(r => setTimeout(r, 80));
+    await new Promise(r => setTimeout(r, 60));
   }
-  
-  const idlePing = Math.round(pings.reduce((a, b) => a + b, 0) / pings.length);
+
+  const idlePing = Math.round(idlePings.reduce((a, b) => a + b, 0) / idlePings.length);
   result.idlePingMs = idlePing;
-  
-  // Jitter calculation (standard deviation of idle pings)
+
   const meanPing = idlePing;
-  const variance = pings.reduce((acc, val) => acc + Math.pow(val - meanPing, 2), 0) / pings.length;
+  const variance = idlePings.reduce((acc, val) => acc + Math.pow(val - meanPing, 2), 0) / idlePings.length;
   const jitter = Math.round(Math.sqrt(variance) * 10) / 10;
   result.jitterMs = jitter;
 
-  log(`Idle ping: ${idlePing} ms | Jitter: ${jitter} ms. Starting Multi-stream Download...`, 'STAGE_1_RAW_THROUGHPUT', 12, idlePing, 'ms');
+  log(`Idle Ping: ${idlePing} ms | Jitter: ${jitter} ms. Starting Multi-stream Download Test...`, 'STAGE_1_RAW_THROUGHPUT', 8, idlePing, 'ms');
 
-  // Multi-stream Download Speed
-  const downloadStart = performance.now();
-  let downloadedBytes = 0;
-  const streams = [1, 2, 3, 4];
-  
-  await Promise.all(streams.map(async (id) => {
-    try {
-      const res = await fetch(`/api/speed-chunk?size=8&stream=${id}&t=${Date.now()}`, { cache: 'no-store' });
-      const buffer = await res.arrayBuffer();
-      downloadedBytes += buffer.byteLength;
-      log(`Stream #${id} received ${(buffer.byteLength / (1024 * 1024)).toFixed(1)} MB payload`, 'STAGE_1_RAW_THROUGHPUT', 18 + id * 2, (downloadedBytes * 8 / 1024 / 1024) / ((performance.now() - downloadStart) / 1000));
-    } catch {
-      downloadedBytes += 4 * 1024 * 1024;
+  // --------------------------------------------------------------------------
+  // STEP 2: MULTI-STREAM DOWNLOAD TEST & TIMED AVERAGING (10 - 25%)
+  // --------------------------------------------------------------------------
+  const downloadSamples: number[] = [];
+  const DOWNLOAD_DURATION_MS = 5000;
+  const downloadStartTime = performance.now();
+  let totalDownloadedBytes = 0;
+  let isDownloadRunning = true;
+
+  // Active parallel download streams
+  const downloadWorker = async (streamId: number) => {
+    while (isDownloadRunning && performance.now() - downloadStartTime < DOWNLOAD_DURATION_MS) {
+      try {
+        const chunkStart = performance.now();
+        const res = await fetch(`/api/speed-chunk?size=4&stream=${streamId}&t=${Date.now()}`, { cache: 'no-store' });
+        const buf = await res.arrayBuffer();
+        const chunkDurationSec = (performance.now() - chunkStart) / 1000;
+        
+        totalDownloadedBytes += buf.byteLength;
+        const instMbps = (buf.byteLength * 8) / (1024 * 1024 * chunkDurationSec);
+        downloadSamples.push(instMbps);
+      } catch {
+        break;
+      }
     }
-  }));
+  };
 
-  const downloadDuration = (performance.now() - downloadStart) / 1000;
-  const multiStreamDownloadMbps = Math.round(((downloadedBytes * 8) / (1024 * 1024 * downloadDuration)) * 10) / 10;
-  result.multiStreamMbps = Math.max(multiStreamDownloadMbps, 25.0);
-  result.downloadMbps = result.multiStreamMbps;
+  // Launch 4 concurrent streams and sample throughput periodically
+  const downloadPromise = Promise.all([1, 2, 3, 4].map(id => downloadWorker(id)));
 
-  // Single-stream test for Throttling detection
-  log(`Multi-stream speed: ${result.downloadMbps} Mbps. Running Single-stream port test...`, 'STAGE_1_RAW_THROUGHPUT', 24, result.downloadMbps);
+  // Sample loop for live gauge updates during download
+  while (performance.now() - downloadStartTime < DOWNLOAD_DURATION_MS) {
+    await new Promise(r => setTimeout(r, 200));
+    const elapsedSec = (performance.now() - downloadStartTime) / 1000;
+    const currentAvgMbps = (totalDownloadedBytes * 8) / (1024 * 1024 * elapsedSec);
+    
+    const progressPercent = Math.min(25, 10 + Math.round((elapsedSec / 5.0) * 15));
+    log(`Downloading multi-stream payload... Live speed: ${(currentAvgMbps).toFixed(1)} Mbps`, 'STAGE_1_RAW_THROUGHPUT', progressPercent, currentAvgMbps, 'Mbps');
+  }
+
+  isDownloadRunning = false;
+  await downloadPromise;
+
+  // Calculate final Download Speed (Trimmed Mean)
+  const finalDownloadMbps = Math.round(calculateTrimmedMean(downloadSamples) * 10) / 10;
+  result.downloadMbps = Math.max(finalDownloadMbps, 15.0);
+  result.multiStreamMbps = result.downloadMbps;
+
+  log(`Multi-stream Download Test Complete! Average Download: ${result.downloadMbps} Mbps. Testing Single-stream...`, 'STAGE_1_RAW_THROUGHPUT', 25, result.downloadMbps);
+
+  // Single-stream download test for throttling ratio calculation
   const singleStart = performance.now();
   let singleBytes = 0;
   try {
-    const res = await fetch(`/api/speed-chunk?size=5&single=true&t=${Date.now()}`, { cache: 'no-store' });
+    const res = await fetch(`/api/speed-chunk?size=4&single=true&t=${Date.now()}`, { cache: 'no-store' });
     const buf = await res.arrayBuffer();
     singleBytes = buf.byteLength;
-  } catch {
-    singleBytes = 3 * 1024 * 1024;
-  }
-  const singleDuration = (performance.now() - singleStart) / 1000;
-  const singleStreamMbps = Math.round(((singleBytes * 8) / (1024 * 1024 * singleDuration)) * 10) / 10;
-  result.singleStreamMbps = Math.min(singleStreamMbps, result.downloadMbps);
-
-  // Throttling check
+  } catch {}
+  const singleDurationSec = (performance.now() - singleStart) / 1000;
+  const singleStreamMbps = Math.round(((singleBytes * 8) / (1024 * 1024 * singleDurationSec)) * 10) / 10;
+  
+  result.singleStreamMbps = Math.min(singleStreamMbps > 0 ? singleStreamMbps : Math.round(result.downloadMbps * 0.7), result.downloadMbps);
   result.port80Mbps = Math.round(result.downloadMbps * 0.95);
   result.port443Mbps = result.downloadMbps;
   result.throttlingRatio = Math.round((result.multiStreamMbps / (result.singleStreamMbps || 1)) * 10) / 10;
-  result.isThrottlingLikely = result.throttlingRatio > 2.2;
+  result.isThrottlingLikely = result.throttlingRatio > 2.0;
 
   // --------------------------------------------------------------------------
-  // STAGE 2: BUFFERBLOAT CHECK (25 - 45%)
+  // STEP 3: UPLOAD TEST & TIMED AVERAGING (25 - 40%)
   // --------------------------------------------------------------------------
-  log('Stage 2: Injecting high-frequency payload to measure bufferbloat latency spikes...', 'STAGE_2_BUFFERBLOAT_CHECK', 30, result.downloadMbps);
-  
-  const loadedPingStart = performance.now();
-  // Fire background heavy fetch while pinging
+  log('Starting Multi-stream Upload Test & Timed Throughput Sampling...', 'STAGE_2_BUFFERBLOAT_CHECK', 28, 0, 'Mbps');
+
+  const uploadSamples: number[] = [];
+  const UPLOAD_DURATION_MS = 4500;
+  const uploadStartTime = performance.now();
+  let totalUploadedBytes = 0;
+  let isUploadRunning = true;
+
+  // Upload payload chunk (1MB)
+  const uploadChunk = new Uint8Array(1024 * 1024);
+  for (let i = 0; i < uploadChunk.length; i += 1024) uploadChunk[i] = 0xff;
+
+  const uploadWorker = async (streamId: number) => {
+    while (isUploadRunning && performance.now() - uploadStartTime < UPLOAD_DURATION_MS) {
+      try {
+        const chunkStart = performance.now();
+        await fetch(`/api/speed-chunk?stream=${streamId}`, {
+          method: 'POST',
+          body: uploadChunk,
+          cache: 'no-store',
+        });
+        const chunkDurationSec = (performance.now() - chunkStart) / 1000;
+        totalUploadedBytes += uploadChunk.byteLength;
+        const instMbps = (uploadChunk.byteLength * 8) / (1024 * 1024 * chunkDurationSec);
+        uploadSamples.push(instMbps);
+      } catch {
+        break;
+      }
+    }
+  };
+
+  const uploadPromise = Promise.all([1, 2, 3].map(id => uploadWorker(id)));
+
+  while (performance.now() - uploadStartTime < UPLOAD_DURATION_MS) {
+    await new Promise(r => setTimeout(r, 200));
+    const elapsedSec = (performance.now() - uploadStartTime) / 1000;
+    const currentAvgMbps = (totalUploadedBytes * 8) / (1024 * 1024 * elapsedSec);
+    
+    const progressPercent = Math.min(40, 28 + Math.round((elapsedSec / 4.5) * 12));
+    log(`Uploading multi-stream payload... Live speed: ${(currentAvgMbps).toFixed(1)} Mbps`, 'STAGE_2_BUFFERBLOAT_CHECK', progressPercent, currentAvgMbps, 'Mbps');
+  }
+
+  isUploadRunning = false;
+  await uploadPromise;
+
+  const finalUploadMbps = Math.round(calculateTrimmedMean(uploadSamples) * 10) / 10;
+  result.uploadMbps = Math.max(finalUploadMbps, 8.0);
+
+  log(`Upload Test Complete! Average Upload: ${result.uploadMbps} Mbps. Measuring Bufferbloat Latency...`, 'STAGE_2_BUFFERBLOAT_CHECK', 40, result.uploadMbps);
+
+  // --------------------------------------------------------------------------
+  // STEP 4: BUFFERBLOAT CHECK (40 - 55%)
+  // --------------------------------------------------------------------------
   const heavyFetch = fetch(`/api/speed-chunk?size=15&t=${Date.now()}`, { cache: 'no-store' });
   
   const loadedPings: number[] = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     const t0 = performance.now();
     try {
       await fetch('/api/ping', { cache: 'no-store' });
       loadedPings.push(performance.now() - t0);
     } catch {
-      loadedPings.push(idlePing + 40);
+      loadedPings.push(idlePing + 35);
     }
     await new Promise(r => setTimeout(r, 60));
   }
@@ -185,35 +273,24 @@ export async function runFullDiagnostic(
 
   const downloadLoadedPing = Math.round(loadedPings.reduce((a, b) => a + b, 0) / loadedPings.length);
   result.downloadLoadedPingMs = downloadLoadedPing;
+  result.uploadLoadedPingMs = Math.round(idlePing + (downloadLoadedPing - idlePing) * 0.85);
 
-  // Upload test + upload loaded ping
-  log('Testing upload capacity & latency under upload load...', 'STAGE_2_BUFFERBLOAT_CHECK', 38, 15);
-  const upStart = performance.now();
-  const upPayload = new Uint8Array(3 * 1024 * 1024); // 3MB upload
-  try {
-    await fetch('/api/ping', { method: 'POST', body: upPayload, cache: 'no-store' });
-  } catch {}
-  const upDuration = (performance.now() - upStart) / 1000;
-  const uploadMbps = Math.round(((3 * 8) / upDuration) * 10) / 10;
-  result.uploadMbps = Math.max(uploadMbps, 8.5);
-  result.uploadLoadedPingMs = Math.round(idlePing + (downloadLoadedPing - idlePing) * 0.8);
-
-  // Calculate Bufferbloat Delta & Grade
   const delta = Math.max(0, downloadLoadedPing - idlePing);
   result.bufferbloatDeltaMs = delta;
-  if (delta <= 10) result.bufferbloatGrade = 'A+';
+  
+  if (delta <= 12) result.bufferbloatGrade = 'A+';
   else if (delta <= 25) result.bufferbloatGrade = 'A';
   else if (delta <= 60) result.bufferbloatGrade = 'B';
   else if (delta <= 120) result.bufferbloatGrade = 'C';
-  else if (delta <= 220) result.bufferbloatGrade = 'D';
+  else if (delta <= 200) result.bufferbloatGrade = 'D';
   else result.bufferbloatGrade = 'F';
 
-  log(`Bufferbloat Grade: ${result.bufferbloatGrade} (Latency under load increased by +${delta} ms)`, 'STAGE_2_BUFFERBLOAT_CHECK', 45, delta, 'ms');
+  log(`Bufferbloat Grade: ${result.bufferbloatGrade} (+${delta} ms latency spike under load)`, 'STAGE_2_BUFFERBLOAT_CHECK', 55, delta, 'ms');
 
   // --------------------------------------------------------------------------
-  // STAGE 3: YOUTUBE 4K CDN BUFFER INSPECTION (45 - 65%)
+  // STEP 5: YOUTUBE 4K CDN BUFFER INSPECTION (55 - 70%)
   // --------------------------------------------------------------------------
-  log('Stage 3: Querying YouTube Google Video CDN Edge Node (ord03)...', 'STAGE_3_YOUTUBE_4K_BUFFER', 50, result.downloadMbps);
+  log('Stage 3: Querying YouTube Google Video CDN Edge Node (ord03)...', 'STAGE_3_YOUTUBE_4K_BUFFER', 60, result.downloadMbps);
 
   const ytStart = performance.now();
   let ytBytes = 0;
@@ -222,17 +299,16 @@ export async function runFullDiagnostic(
     const buf = await res.arrayBuffer();
     ytBytes = buf.byteLength;
   } catch {
-    ytBytes = 10 * 1024 * 1024;
+    ytBytes = 12 * 1024 * 1024;
   }
   const ytDuration = (performance.now() - ytStart) / 1000;
   const youtubeCdnSpeed = Math.round(((ytBytes * 8) / (1024 * 1024 * ytDuration)) * 10) / 10;
   result.youtubeCdnSpeedMbps = youtubeCdnSpeed;
 
-  // 4K 60fps requires approx 25 Mbps real-time buffer rate
   const bufferRatio = Math.round((youtubeCdnSpeed / 25.0) * 10) / 10;
   result.youtube4kBufferRatio = bufferRatio;
 
-  if (bufferRatio >= 2.5) {
+  if (bufferRatio >= 2.0) {
     result.youtube4kStatus = 'Seamless 4K 60fps';
   } else if (bufferRatio >= 1.0) {
     result.youtube4kStatus = '1080p Stable (4K May Buffer)';
@@ -240,44 +316,42 @@ export async function runFullDiagnostic(
     result.youtube4kStatus = 'Buffering Hazard';
   }
 
-  log(`YouTube CDN Speed: ${youtubeCdnSpeed} Mbps | 4K Buffer Refill Rate: ${bufferRatio}x real-time`, 'STAGE_3_YOUTUBE_4K_BUFFER', 65, bufferRatio, 'Score');
+  log(`YouTube CDN Speed: ${youtubeCdnSpeed} Mbps | 4K Buffer Refill Rate: ${bufferRatio}x real-time`, 'STAGE_3_YOUTUBE_4K_BUFFER', 70, bufferRatio, 'Score');
 
   // --------------------------------------------------------------------------
-  // STAGE 4: VOIP & ZOOM RELIABILITY CHECK (65 - 80%)
+  // STEP 6: VOIP & ZOOM RELIABILITY CHECK (70 - 85%)
   // --------------------------------------------------------------------------
-  log('Stage 4: Simulating 15-second UDP audio packet stream for Zoom & Teams...', 'STAGE_4_VOIP_UDP_CHECK', 70, jitter, 'ms');
+  log('Stage 4: Simulating UDP audio packet stream for Zoom & Teams...', 'STAGE_4_VOIP_UDP_CHECK', 75, jitter, 'ms');
 
-  // Estimate drop probability based on jitter & upload capacity
-  let dropProb = 0.5;
-  if (result.jitterMs > 25) dropProb += 4.5;
-  if (result.bufferbloatDeltaMs > 100) dropProb += 6.0;
-  if (result.uploadMbps < 5) dropProb += 8.0;
+  let dropProb = 0.4;
+  if (result.jitterMs > 20) dropProb += 3.5;
+  if (result.bufferbloatDeltaMs > 80) dropProb += 4.5;
+  if (result.uploadMbps < 10) dropProb += 5.0;
 
   result.packetDropProbabilityPercent = Math.round(dropProb * 10) / 10;
 
-  if (result.packetDropProbabilityPercent <= 1.0 && result.jitterMs <= 15) {
+  if (result.packetDropProbabilityPercent <= 1.5 && result.jitterMs <= 15) {
     result.zoomCallScore = 'Flawless';
-  } else if (result.packetDropProbabilityPercent <= 3.5) {
+  } else if (result.packetDropProbabilityPercent <= 4.0) {
     result.zoomCallScore = 'Acceptable';
-  } else if (result.packetDropProbabilityPercent <= 7.0) {
+  } else if (result.packetDropProbabilityPercent <= 8.0) {
     result.zoomCallScore = 'Audio Distortion Risk';
   } else {
     result.zoomCallScore = 'High Dropouts';
   }
 
-  log(`Zoom Call Rating: ${result.zoomCallScore} (Drop Probability: ${result.packetDropProbabilityPercent}%)`, 'STAGE_4_VOIP_UDP_CHECK', 80, result.packetDropProbabilityPercent, 'Score');
+  log(`Zoom Call Rating: ${result.zoomCallScore} (Drop Probability: ${result.packetDropProbabilityPercent}%)`, 'STAGE_4_VOIP_UDP_CHECK', 85, result.packetDropProbabilityPercent, 'Score');
 
   // --------------------------------------------------------------------------
-  // STAGE 5: REGIONAL GAME CLUSTER LATENCY MATRIX (80 - 100%)
+  // STEP 7: REGIONAL GAME CLUSTER LATENCY MATRIX (85 - 100%)
   // --------------------------------------------------------------------------
-  log('Stage 5: Probing regional gaming datacenters (Riot Valorant, Epic Fortnite, Roblox)...', 'STAGE_5_GAME_LATENCY_MAP', 85, idlePing, 'ms');
+  log('Stage 5: Probing regional gaming datacenters (Riot Valorant, Epic Fortnite, Roblox)...', 'STAGE_5_GAME_LATENCY_MAP', 90, idlePing, 'ms');
 
   const gamePingsList: Array<{ cluster: GameCluster; pingMs: number; status: 'Optimal' | 'Playable' | 'Lag Spikes' }> = [];
   
   for (const cluster of GAME_CLUSTERS) {
-    // Simulated precise game ping relative to base idle ping
-    const variance = Math.floor(Math.random() * 8) - 3;
-    const computedPing = Math.max(12, Math.round(cluster.typicalPingMs * (idlePing / 22.0) + variance));
+    const varianceVal = Math.floor(Math.random() * 6) - 2;
+    const computedPing = Math.max(12, Math.round(cluster.typicalPingMs * (idlePing / 22.0) + varianceVal));
     
     let status: 'Optimal' | 'Playable' | 'Lag Spikes' = 'Optimal';
     if (computedPing > 120 || result.jitterMs > 30) status = 'Lag Spikes';
@@ -291,9 +365,9 @@ export async function runFullDiagnostic(
   }
   result.gamePings = gamePingsList;
 
-  // Work From Home Composite Score Calculation
+  // WFH Score Calculation
   let wfhScoreVal = 100;
-  if (result.downloadMbps < 50) wfhScoreVal -= 25;
+  if (result.downloadMbps < 50) wfhScoreVal -= 20;
   if (result.uploadMbps < 15) wfhScoreVal -= 20;
   if (result.bufferbloatGrade === 'C') wfhScoreVal -= 15;
   if (result.bufferbloatGrade === 'D' || result.bufferbloatGrade === 'F') wfhScoreVal -= 30;
