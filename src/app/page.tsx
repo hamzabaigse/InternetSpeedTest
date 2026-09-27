@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { AdSlot } from '@/components/AdSlot';
@@ -8,7 +8,7 @@ import { SpeedometerCanvas } from '@/components/SpeedometerCanvas';
 import { ProgressiveDiagnosticConsole } from '@/components/ProgressiveDiagnosticConsole';
 import { InteractiveReportTabs } from '@/components/InteractiveReportTabs';
 import { runFullDiagnostic, DiagnosticResult, DiagnosticStage } from '@/lib/speedTestEngine';
-import { Activity, Play, RefreshCw, Zap, ShieldCheck, FileText, Tv, Gamepad2, AlertCircle } from 'lucide-react';
+import { Activity, Play, RefreshCw, Zap, ShieldCheck, FileText, Info } from 'lucide-react';
 import { generateIspComplaintPdf } from '@/lib/pdfGenerator';
 import confetti from 'canvas-confetti';
 
@@ -17,7 +17,9 @@ export default function Home() {
   const [stage, setStage] = useState<DiagnosticStage>('IDLE');
   const [progress, setProgress] = useState(0);
   const [gaugeValue, setGaugeValue] = useState(0);
+  const [runningAvg, setRunningAvg] = useState<number | undefined>(undefined);
   const [gaugeUnit, setGaugeUnit] = useState<'Mbps' | 'ms' | 'Score'>('Mbps');
+  const [unitMode, setUnitMode] = useState<'Mbps' | 'MBps'>('Mbps'); // Megabits/s vs Megabytes/s
   const [consoleLog, setConsoleLog] = useState<string[]>([]);
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [tabRefreshCounter, setTabRefreshCounter] = useState(0);
@@ -28,12 +30,14 @@ export default function Home() {
     setConsoleLog([]);
     setProgress(0);
     setGaugeValue(0);
+    setRunningAvg(undefined);
 
     try {
       const finalResult = await runFullDiagnostic((data) => {
         setStage(data.stage);
         setProgress(data.stagePercent);
         setGaugeValue(data.currentGaugeValue);
+        setRunningAvg(data.runningAverageMbps);
         setGaugeUnit(data.gaugeUnit);
         setConsoleLog((prev) => [...prev.slice(-15), data.consoleMessage]);
       });
@@ -42,7 +46,6 @@ export default function Home() {
       setStage('COMPLETED');
       setIsTesting(false);
       
-      // Celebrate completion
       confetti({
         particleCount: 50,
         spread: 60,
@@ -60,38 +63,66 @@ export default function Home() {
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Sticky Top Leaderboard Ad Slot */}
         <AdSlot slotType="leaderboard" refreshTrigger={stage} />
 
-        {/* Hero Banner / Page Title */}
+        {/* Hero Title */}
         <div className="text-center my-6">
           <div className="inline-flex items-center gap-2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold px-3 py-1 rounded-full mb-3 shadow-inner">
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Search-Engine-Optimized Network Diagnostic & ISP Intelligence Hub</span>
+            <span>Search-Engine-Optimized Network Diagnostic &amp; ISP Intelligence Hub</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
             Comprehensive 40-Second Network Intelligence Test
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto mt-2">
-            Measures YouTube 4K CDN buffer rate, bufferbloat latency spikes, Zoom call reliability, and game datacenter pings in real time.
+            Measures real-time &amp; average download/upload speeds, YouTube 4K CDN buffer rate, bufferbloat latency spikes, and game datacenters.
           </p>
+
+          {/* Unit Toggle Switch: Megabits vs Megabytes */}
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
+              <Info className="w-3.5 h-3.5 text-cyan-400" /> Display Unit:
+            </span>
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-1 flex gap-1">
+              <button
+                onClick={() => setUnitMode('Mbps')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+                  unitMode === 'Mbps'
+                    ? 'bg-cyan-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Mbps (Megabits/s - ISP Standard)
+              </button>
+              <button
+                onClick={() => setUnitMode('MBps')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition ${
+                  unitMode === 'MBps'
+                    ? 'bg-cyan-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                MB/s (Megabytes/s - File Download)
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Main Grid Layout: Left Speedometer & Console | Right 300x600 Half-Page Ad */}
+        {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (8 cols) */}
           <div className="lg:col-span-8 space-y-6">
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                 <Activity className="w-48 h-48 text-cyan-400" />
               </div>
 
-              {/* Speedometer Gauge & Start Button */}
               <div className="flex flex-col items-center justify-center">
                 <SpeedometerCanvas
                   value={gaugeValue}
+                  runningAvg={runningAvg}
                   maxValue={stage === 'STAGE_2_BUFFERBLOAT_CHECK' || stage === 'STAGE_4_VOIP_UDP_CHECK' ? 200 : 500}
                   unit={gaugeUnit}
+                  displayMode={unitMode}
                   isTesting={isTesting}
                   stageName={stage === 'IDLE' ? 'Ready' : stage.replace('STAGE_', 'Step ')}
                 />
@@ -132,7 +163,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Progressive Diagnostic Console */}
             <ProgressiveDiagnosticConsole
               currentStage={stage}
               progressPercent={progress}
@@ -140,17 +170,15 @@ export default function Home() {
               isTesting={isTesting}
             />
 
-            {/* Native 300x250 Ad Block */}
             <AdSlot slotType="rectangle" title="Upgrade to SQM Gaming Router to Eliminate Bufferbloat" />
           </div>
 
-          {/* Right Column: 300x600 Half-Page High-CPM Ad Slot (4 cols) */}
           <div className="lg:col-span-4 sticky top-20">
             <AdSlot slotType="half-page" refreshTrigger={tabRefreshCounter} />
           </div>
         </div>
 
-        {/* Revealed Detailed Intelligence Report (Unlocked after test) */}
+        {/* Unlocked Detailed Intelligence Report */}
         {result && (
           <div className="mt-8 animate-fadeIn">
             <div className="bg-slate-950/80 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl">
@@ -167,25 +195,10 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Interactive Tabs (Triggers Sidebar Ad Refresh) */}
               <InteractiveReportTabs
                 result={result}
                 onTabChange={() => setTabRefreshCounter((prev) => prev + 1)}
               />
-
-              {/* SEO Article Text Tailored to Result (Reduces Bounce Rate) */}
-              <div className="mt-8 bg-slate-900/60 p-6 rounded-xl border border-slate-800 text-xs leading-relaxed text-slate-300 space-y-3">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-cyan-400" />
-                  Why Is Your Video Stuttering or Ping Spiking?
-                </h3>
-                <p>
-                  Most broadband users assume a 300 Mbps or 1 Gbps Internet connection guarantees zero video buffering and low ping. However, network degradation is rarely caused by raw throughput. The two primary bottlenecks are <strong>Bufferbloat</strong> and <strong>ISP Peering Throttling</strong>.
-                </p>
-                <p>
-                  <strong>Bufferbloat</strong> occurs when your router buffers excessive data during high usage, adding up to +200ms of latency lag to real-time streams. Smart Queue Management (SQM) solves this by prioritizing small latency-sensitive packets (Zoom audio & game pings) ahead of large download blocks.
-                </p>
-              </div>
             </div>
           </div>
         )}

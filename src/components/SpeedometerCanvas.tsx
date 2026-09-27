@@ -3,21 +3,30 @@
 import React, { useEffect, useRef } from 'react';
 
 interface SpeedometerCanvasProps {
-  value: number; // current Mbps or ms
+  value: number; // live speed or value
+  runningAvg?: number; // running average speed
   maxValue?: number;
   unit?: string;
   isTesting: boolean;
   stageName?: string;
+  displayMode?: 'Mbps' | 'MBps'; // Megabits vs Megabytes
 }
 
 export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
   value,
+  runningAvg,
   maxValue = 500,
   unit = 'Mbps',
   isTesting,
   stageName = 'Ready to Diagnose',
+  displayMode = 'Mbps',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Convert value according to displayMode
+  const displayVal = displayMode === 'MBps' && unit === 'Mbps' ? value / 8 : value;
+  const displayAvg = runningAvg !== undefined ? (displayMode === 'MBps' && unit === 'Mbps' ? runningAvg / 8 : runningAvg) : undefined;
+  const displayUnit = unit === 'Mbps' ? (displayMode === 'MBps' ? 'MB/s' : 'Mbps') : unit;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -37,7 +46,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
 
       ctx.clearRect(0, 0, width, height);
 
-      // Background telemetry wave during test
+      // Telemetry wave
       if (isTesting) {
         ctx.beginPath();
         ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
@@ -51,29 +60,27 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Outer Arc Track (180 degrees from Math.PI to 2*Math.PI)
+      // Outer Arc Track
       const startAngle = Math.PI * 0.85;
       const endAngle = Math.PI * 2.15;
 
-      // Draw background track
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-      ctx.strokeStyle = '#1e293b'; // slate-800
+      ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 14;
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Calculate progress angle
+      // Active progress arc
       const clampedValue = Math.min(Math.max(value, 0), maxValue);
       const percent = clampedValue / maxValue;
       const currentAngle = startAngle + (endAngle - startAngle) * percent;
 
-      // Draw active progress gradient arc
       if (percent > 0) {
         const gradient = ctx.createLinearGradient(0, 0, width, 0);
-        gradient.addColorStop(0, '#06b6d4'); // cyan
-        gradient.addColorStop(0.5, '#3b82f6'); // blue
-        gradient.addColorStop(1, '#10b981'); // emerald
+        gradient.addColorStop(0, '#06b6d4');
+        gradient.addColorStop(0.5, '#3b82f6');
+        gradient.addColorStop(1, '#10b981');
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, startAngle, currentAngle);
@@ -83,7 +90,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Ticks & Labels around gauge
+      // Ticks
       const ticks = 10;
       for (let i = 0; i <= ticks; i++) {
         const tickPercent = i / ticks;
@@ -104,7 +111,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         ctx.stroke();
       }
 
-      // Draw Needle
+      // Needle
       const needleAngle = currentAngle;
       const needleLen = radius - 10;
       const needleX = centerX + Math.cos(needleAngle) * needleLen;
@@ -118,7 +125,7 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Needle Center Knob
+      // Knob
       ctx.beginPath();
       ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
       ctx.fillStyle = '#0f172a';
@@ -146,12 +153,28 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         className="w-[340px] h-[240px] max-w-full"
       />
       {/* Digital HUD Overlay */}
-      <div className="absolute top-[52%] flex flex-col items-center justify-center pointer-events-none">
+      <div className="absolute top-[48%] flex flex-col items-center justify-center pointer-events-none text-center">
+        {/* Real-time Instantaneous Speed */}
         <div className="text-4xl sm:text-5xl font-black text-white tracking-tight flex items-baseline gap-1 font-mono">
-          <span>{value.toFixed(1)}</span>
-          <span className="text-sm font-bold text-cyan-400 font-sans">{unit}</span>
+          <span>{displayVal.toFixed(1)}</span>
+          <span className="text-xs sm:text-sm font-bold text-cyan-400 font-sans">{displayUnit}</span>
         </div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mt-1 bg-slate-900/80 px-2.5 py-0.5 rounded border border-slate-800">
+
+        {/* Live vs Running Average Pill */}
+        {isTesting && displayAvg !== undefined && unit === 'Mbps' && (
+          <div className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded mt-1 shadow">
+            Avg: {displayAvg.toFixed(1)} {displayUnit}
+          </div>
+        )}
+
+        {/* Unit explanation tooltip */}
+        {unit === 'Mbps' && (
+          <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+            ({(value / 8).toFixed(1)} Megabytes/sec)
+          </div>
+        )}
+
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-300 mt-1.5 bg-slate-900/90 px-2.5 py-0.5 rounded border border-slate-800">
           {stageName}
         </div>
       </div>
