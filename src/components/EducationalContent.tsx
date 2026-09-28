@@ -58,7 +58,10 @@ export const EducationalContent: React.FC = () => {
   };
 
   return (
-    <article className="w-full mt-14 space-y-12 text-slate-200">
+    <article
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 1200px' }}
+      className="w-full mt-14 space-y-12 text-slate-200"
+    >
       {/* Section 1: Core Metrics Explained */}
       <section className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-xl">
         <div className="flex items-center gap-3 mb-4">

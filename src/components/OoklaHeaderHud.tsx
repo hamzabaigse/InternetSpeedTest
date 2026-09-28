@@ -76,7 +76,7 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
             <span className="xs:hidden sm:hidden">DOWN</span>
             <span className="text-xs text-cyan-300 font-mono font-semibold">({unitLabel})</span>
           </div>
-          <div className="text-xl sm:text-5xl font-black text-white font-mono mt-0.5 sm:mt-1 tracking-tight">
+          <div className="text-xl sm:text-5xl font-black text-white font-mono tabular-nums mt-0.5 sm:mt-1 tracking-tight">
             {displayDownload}
           </div>
         </div>
@@ -91,7 +91,7 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
             <span className="xs:hidden sm:hidden">UP</span>
             <span className="text-xs text-purple-300 font-mono font-semibold">({unitLabel})</span>
           </div>
-          <div className="text-xl sm:text-5xl font-black text-white font-mono mt-0.5 sm:mt-1 tracking-tight">
+          <div className="text-xl sm:text-5xl font-black text-white font-mono tabular-nums mt-0.5 sm:mt-1 tracking-tight">
             {displayUpload}
           </div>
         </div>

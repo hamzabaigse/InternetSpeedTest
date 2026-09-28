@@ -142,11 +142,9 @@ export default function Home() {
     <div className="min-h-screen bg-dark-bg text-slate-100 flex flex-col font-sans">
       <Header />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <AdSlot slotType="leaderboard" refreshTrigger={stage} />
-
-        {/* Hero Title */}
-        <div className="text-center my-4 sm:my-6 px-2">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5">
+        {/* Hero Title at Very Top for Instant FCP & LCP */}
+        <div className="text-center my-2 sm:my-5 px-2">
           <div className="inline-flex items-center gap-2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold px-3 py-1 rounded-full mb-2 sm:mb-3 shadow-inner">
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
             <span>Search-Engine-Optimized Network Diagnostic &amp; ISP Intelligence Hub</span>
@@ -157,6 +155,11 @@ export default function Home() {
           <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto mt-1 sm:mt-2">
             Measures real-time download &amp; upload throughput, YouTube 4K CDN buffer rate, bufferbloat latency spikes, and game datacenters.
           </p>
+        </div>
+
+        {/* Zero-Shift Reserved Ad Container */}
+        <div className="w-full min-h-[90px] my-3 sm:my-4" style={{ contain: 'layout' }}>
+          <AdSlot slotType="leaderboard" />
         </div>
 
         {/* Main Grid Layout */}

@@ -1,3 +1,4 @@
+import Script from 'next/script';
 import type { Metadata } from 'next';
 import './globals.css';
 import { SeoSchema } from '@/components/SeoSchema';
@@ -64,18 +65,21 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <SeoSchema />
+        <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
         {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
-          <>
-            <meta name="google-adsense-account" content={adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`} />
-            <script
-              async
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`}`}
-              crossOrigin="anonymous"
-            />
-          </>
+          <meta name="google-adsense-account" content={adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`} />
         )}
       </head>
       <body className="bg-dark-bg text-slate-100 min-h-screen antialiased">
+        {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
+          <Script
+            id="google-adsense-script"
+            strategy="afterInteractive"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`}`}
+            crossOrigin="anonymous"
+          />
+        )}
         {children}
       </body>
     </html>

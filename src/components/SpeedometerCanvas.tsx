@@ -168,24 +168,33 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      animationFrameId = requestAnimationFrame(render);
+      // CPU-Optimization: only animate if testing or needle is actively moving to reduce INP to < 50ms
+      const diff = Math.abs(targetPercent - currentAnglePercentRef.current);
+      if (isTesting || diff > 0.001) {
+        animationFrameId = requestAnimationFrame(render);
+      } else {
+        currentAnglePercentRef.current = targetPercent;
+      }
     };
 
     render();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
   }, [valueMbps, isTesting, unitMode, activePhase]);
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-1 sm:p-2">
-      {/* Sleek Ookla-Style Dial Face */}
+      {/* Sleek Ookla-Style Dial Face with explicit aspect ratio to eliminate CLS */}
       <canvas
         ref={canvasRef}
         width={380}
         height={240}
-        className="w-full max-w-[310px] sm:max-w-[380px] h-[195px] sm:h-[240px]"
+        style={{ aspectRatio: '380 / 240' }}
+        className="w-full max-w-[310px] sm:max-w-[380px] h-[195px] sm:h-[240px] block"
       />
 
       {/* Speed Readout Below Meter */}
