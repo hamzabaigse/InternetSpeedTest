@@ -12,6 +12,8 @@ import { runFullDiagnostic, DiagnosticResult, DiagnosticStage } from '@/lib/spee
 import { Activity, Play, RefreshCw, Zap, ShieldCheck, FileText, Settings2, CheckCircle2 } from 'lucide-react';
 import { generateIspComplaintPdf } from '@/lib/pdfGenerator';
 import confetti from 'canvas-confetti';
+import { EducationalContent } from '@/components/EducationalContent';
+import { CookieBanner } from '@/components/CookieBanner';
 
 export default function Home() {
   const [isTesting, setIsTesting] = useState(false);
@@ -307,9 +309,13 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* 1,500+ Word Editorial & Technical Diagnostic Guide for AdSense Compliance */}
+        <EducationalContent />
       </main>
 
       <Footer />
+      <CookieBanner />
     </div>
   );
 }
