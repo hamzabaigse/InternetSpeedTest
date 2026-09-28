@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const quality = searchParams.get('quality') || '4k'; // '4k' | '1080p'
   const isCongestedSim = searchParams.get('simulate_throttling') === 'true';
 
-  // 4k chunk target: 12MB (representing ~5 seconds of 4K 60fps AV1 video at ~20-25Mbps bitrate)
-  // 1080p chunk target: 4MB
-  const targetMb = quality === '4k' ? 12 : 4;
+  // 4k burst target: 3.5MB (safely under Netlify 6MB serverless payload limit)
+  // 1080p target: 1.5MB
+  const targetMb = quality === '4k' ? 3.5 : 1.5;
   const totalBytes = Math.floor(targetMb * 1024 * 1024);
 
   const chunk = new Uint8Array(totalBytes);
@@ -18,8 +20,7 @@ export async function GET(request: NextRequest) {
 
   // If throttling simulation requested for ISP YouTube peering test
   if (isCongestedSim) {
-    // Add artificial delay before serving bytes
-    await new Promise(res => setTimeout(res, 250));
+    await new Promise(res => setTimeout(res, 200));
   }
 
   return new NextResponse(chunk, {
