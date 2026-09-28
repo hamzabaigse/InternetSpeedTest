@@ -70,11 +70,11 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
         <div className={`flex flex-col items-center p-1.5 sm:p-2 rounded-xl transition ${
           activePhase === 'download' ? 'bg-cyan-950/60 border border-cyan-500/40 glow-cyan' : ''
         }`}>
-          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-cyan-400">
+          <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-cyan-400">
             <ArrowDownCircle className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 ${activePhase === 'download' ? 'animate-bounce' : ''}`} />
             <span className="hidden xs:inline sm:inline">DOWNLOAD</span>
             <span className="xs:hidden sm:hidden">DOWN</span>
-            <span className="text-[9px] sm:text-[10px] text-cyan-300 font-mono">{unitLabel}</span>
+            <span className="text-xs text-cyan-300 font-mono font-semibold">({unitLabel})</span>
           </div>
           <div className="text-xl sm:text-5xl font-black text-white font-mono mt-0.5 sm:mt-1 tracking-tight">
             {displayDownload}
@@ -85,11 +85,11 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
         <div className={`flex flex-col items-center p-1.5 sm:p-2 rounded-xl transition ${
           activePhase === 'upload' ? 'bg-purple-950/60 border border-purple-500/40' : ''
         }`}>
-          <div className="flex items-center gap-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-purple-400">
+          <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-purple-400">
             <ArrowUpCircle className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 ${activePhase === 'upload' ? 'animate-bounce' : ''}`} />
             <span className="hidden xs:inline sm:inline">UPLOAD</span>
             <span className="xs:hidden sm:hidden">UP</span>
-            <span className="text-[9px] sm:text-[10px] text-purple-300 font-mono">{unitLabel}</span>
+            <span className="text-xs text-purple-300 font-mono font-semibold">({unitLabel})</span>
           </div>
           <div className="text-xl sm:text-5xl font-black text-white font-mono mt-0.5 sm:mt-1 tracking-tight">
             {displayUpload}
@@ -98,20 +98,20 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
 
         {/* PING */}
         <div className="flex flex-col items-center p-1.5 sm:p-2">
-          <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mb-0.5 sm:mb-1">
-            Ping <span className="text-[9px] lowercase text-slate-500">ms</span>
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-0.5 sm:mb-1">
+            Ping <span className="text-xs lowercase text-slate-400 font-semibold">(ms)</span>
           </div>
           <div className="flex items-center justify-center gap-1.5 sm:gap-4 text-xs sm:text-sm font-mono font-bold">
             <div className="flex items-center gap-0.5 text-amber-400">
-              <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-amber-400" />
+              <Zap className="w-3.5 h-3.5 fill-amber-400" />
               <span>{idlePingMs !== undefined ? idlePingMs : '--'}</span>
             </div>
             <div className="flex items-center gap-0.5 text-cyan-400">
-              <ArrowDownCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <ArrowDownCircle className="w-3.5 h-3.5" />
               <span>{downloadLoadedPingMs !== undefined ? downloadLoadedPingMs : '--'}</span>
             </div>
             <div className="flex items-center gap-0.5 text-purple-400">
-              <ArrowUpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <ArrowUpCircle className="w-3.5 h-3.5" />
               <span>{uploadLoadedPingMs !== undefined ? uploadLoadedPingMs : '--'}</span>
             </div>
           </div>
@@ -122,25 +122,25 @@ export const OoklaHeaderHud: React.FC<OoklaHeaderHudProps> = ({
       <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-xl mx-auto text-center">
         <div className="flex flex-col items-center p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Globe className="w-5 h-5 text-cyan-400" />
-          <span className="text-[10px] font-semibold text-slate-300 mt-1 hidden sm:inline">Web Browsing</span>
+          <span className="text-xs font-semibold text-slate-200 mt-1 hidden sm:inline">Web Browsing</span>
           {renderDots(categoryScores.webBrowsingDots)}
         </div>
 
         <div className="flex flex-col items-center p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Gamepad2 className="w-5 h-5 text-emerald-400" />
-          <span className="text-[10px] font-semibold text-slate-300 mt-1 hidden sm:inline">Online Gaming</span>
+          <span className="text-xs font-semibold text-slate-200 mt-1 hidden sm:inline">Online Gaming</span>
           {renderDots(categoryScores.gamingDots)}
         </div>
 
         <div className="flex flex-col items-center p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Tv className="w-5 h-5 text-red-400" />
-          <span className="text-[10px] font-semibold text-slate-300 mt-1 hidden sm:inline">4K Video</span>
+          <span className="text-xs font-semibold text-slate-200 mt-1 hidden sm:inline">4K Video</span>
           {renderDots(categoryScores.videoStreamingDots)}
         </div>
 
         <div className="flex flex-col items-center p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Video className="w-5 h-5 text-purple-400" />
-          <span className="text-[10px] font-semibold text-slate-300 mt-1 hidden sm:inline">Video Calls</span>
+          <span className="text-xs font-semibold text-slate-200 mt-1 hidden sm:inline">Video Calls</span>
           {renderDots(categoryScores.videoCallingDots)}
         </div>
       </div>

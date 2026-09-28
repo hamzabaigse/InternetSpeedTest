@@ -145,7 +145,7 @@ export default function Home() {
 
         {/* Hero Title */}
         <div className="text-center my-4 sm:my-6 px-2">
-          <div className="inline-flex items-center gap-2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-[11px] sm:text-xs font-semibold px-3 py-1 rounded-full mb-2 sm:mb-3 shadow-inner">
+          <div className="inline-flex items-center gap-2 bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold px-3 py-1 rounded-full mb-2 sm:mb-3 shadow-inner">
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
             <span>Search-Engine-Optimized Network Diagnostic &amp; ISP Intelligence Hub</span>
           </div>
@@ -168,14 +168,14 @@ export default function Home() {
 
               {/* Unit Scale Switcher */}
               <div className="flex flex-col sm:flex-row items-center justify-between bg-slate-950/80 border border-slate-800 p-2 sm:p-3 rounded-xl mb-3 sm:mb-6 gap-2 sm:gap-3">
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-white">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                   <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Choose Speed Scale:</span>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-lg p-1 flex gap-1 w-full sm:w-auto">
                   <button
                     onClick={() => setUnitMode('Mbps')}
-                    className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-extrabold transition ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-md text-xs font-extrabold transition ${
                       unitMode === 'Mbps'
                         ? 'bg-cyan-500 text-slate-950 shadow-md glow-cyan'
                         : 'text-slate-400 hover:text-white'
@@ -185,7 +185,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={() => setUnitMode('MBps')}
-                    className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-extrabold transition ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-md text-xs font-extrabold transition ${
                       unitMode === 'MBps'
                         ? 'bg-cyan-500 text-slate-950 shadow-md glow-cyan'
                         : 'text-slate-400 hover:text-white'

@@ -26,11 +26,11 @@ export const Header: React.FC = () => {
           <div>
             <div className="font-extrabold text-white text-base tracking-tight flex items-center gap-1.5">
               SpeedNet<span className="text-cyan-400">Hub</span>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
+              <span className="bg-emerald-500/20 text-emerald-400 text-xs uppercase font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
                 100% FREE HUB
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 hidden sm:block">Free ISP Intelligence &amp; Network Telemetry</p>
+            <p className="text-xs text-slate-400 hidden sm:block">Free ISP Intelligence &amp; Network Telemetry</p>
           </div>
         </Link>
 
@@ -47,6 +47,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/tools/isp-throttling-report"
+            aria-label="Generate Free ISP Complaint PDF Report"
             className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-lg transition shadow-md flex items-center gap-1.5"
           >
             <ShieldAlert className="w-4 h-4" />

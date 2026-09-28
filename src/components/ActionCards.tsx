@@ -3,7 +3,7 @@
 import React from 'react';
 import { DiagnosticResult } from '@/lib/speedTestEngine';
 import { generateIspComplaintPdf } from '@/lib/pdfGenerator';
-import { Router, ShieldAlert, Cpu, ExternalLink, Zap, FileText, CheckCircle2 } from 'lucide-react';
+import { Router, ShieldAlert, Zap, CheckCircle2 } from 'lucide-react';
 
 interface ActionCardsProps {
   result: DiagnosticResult;
@@ -29,12 +29,12 @@ export const ActionCards: React.FC<ActionCardsProps> = ({ result, onTabSelect })
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-white">Fix Bufferbloat Grade ({result.bufferbloatGrade})</h4>
-                  <span className="text-[11px] text-amber-400 font-semibold">
+                  <span className="text-xs text-amber-400 font-semibold">
                     +{result.bufferbloatDeltaMs} ms Latency Spike under Load
                   </span>
                 </div>
               </div>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+              <span className="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-0.5 rounded border border-emerald-500/30">
                 100% Free Fix
               </span>
             </div>
@@ -42,12 +42,12 @@ export const ActionCards: React.FC<ActionCardsProps> = ({ result, onTabSelect })
               When heavy downloads occur on your home network, router buffers overflow, causing lag spikes in games and Zoom distortion. <strong>Smart Queue Management (SQM)</strong> resolves bufferbloat automatically.
             </p>
             <div className="bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 mb-4 text-xs space-y-1.5 text-slate-300">
-              <div className="font-semibold text-cyan-400 text-[11px]">Free Router Tweaks:</div>
-              <div className="flex items-center gap-2 text-[11px]">
+              <div className="font-semibold text-cyan-400 text-xs">Free Router Tweaks:</div>
+              <div className="flex items-center gap-2 text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Enable QoS / SQM Bandwidth Limit (Cap at 95%)</span>
               </div>
-              <div className="flex items-center gap-2 text-[11px]">
+              <div className="flex items-center gap-2 text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Switch DNS to 1.1.1.1 (Cloudflare Free Ultra-Fast DNS)</span>
               </div>
@@ -55,6 +55,7 @@ export const ActionCards: React.FC<ActionCardsProps> = ({ result, onTabSelect })
           </div>
 
           <button
+            type="button"
             onClick={() => onTabSelect && onTabSelect('router')}
             className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition border border-slate-700"
           >
@@ -74,12 +75,12 @@ export const ActionCards: React.FC<ActionCardsProps> = ({ result, onTabSelect })
                   <h4 className="text-sm font-bold text-white">
                     {result.isThrottlingLikely ? 'ISP Traffic Shaping Detected' : 'Official Throttling Audit'}
                   </h4>
-                  <span className="text-[11px] text-rose-400 font-semibold">
+                  <span className="text-xs text-rose-400 font-semibold">
                     Multi/Single Ratio: {result.throttlingRatio}x
                   </span>
                 </div>
               </div>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+              <span className="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-0.5 rounded border border-emerald-500/30">
                 Free Download
               </span>
             </div>
@@ -89,6 +90,7 @@ export const ActionCards: React.FC<ActionCardsProps> = ({ result, onTabSelect })
           </div>
 
           <button
+            type="button"
             onClick={() => generateIspComplaintPdf(result)}
             className="w-full bg-gradient-to-r from-rose-600 via-red-600 to-orange-600 hover:from-rose-500 hover:to-orange-500 text-white font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md"
           >

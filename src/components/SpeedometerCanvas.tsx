@@ -196,12 +196,12 @@ export const SpeedometerCanvas: React.FC<SpeedometerCanvasProps> = ({
         </div>
 
         {/* Dual Conversion Subtitle */}
-        <div className="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
+        <div className="text-xs text-slate-300 font-mono mt-0.5">
           ({altVal.toFixed(2)} {altUnit})
         </div>
 
         {/* Active Stage Badge */}
-        <div className="mt-2.5 inline-flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 sm:px-4 py-1 rounded-full text-[11px] sm:text-xs font-bold text-slate-200 shadow-md">
+        <div className="mt-2.5 inline-flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold text-slate-200 shadow-md">
           {activePhase === 'download' && <ArrowDownCircle className="w-3.5 h-3.5 text-cyan-400 animate-bounce" />}
           {activePhase === 'upload' && <ArrowUpCircle className="w-3.5 h-3.5 text-purple-400 animate-bounce" />}
           {activePhase === 'ping' && <Zap className="w-3.5 h-3.5 text-amber-400" />}
