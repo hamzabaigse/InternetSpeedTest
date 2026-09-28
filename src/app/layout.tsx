@@ -3,7 +3,7 @@ import './globals.css';
 import { SeoSchema } from '@/components/SeoSchema';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speed-net.online';
-const adsensePubId = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID || 'ca-pub-0000000000000000';
+const adsensePubId = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID || 'ca-pub-1967995859234566';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
