@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const SeoSchema: React.FC = () => {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speednethub.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speed-net.online';
 
   const webAppSchema = {
     '@context': 'https://schema.org',

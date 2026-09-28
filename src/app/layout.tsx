@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { SeoSchema } from '@/components/SeoSchema';
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speednethub.com';
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speed-net.online';
+const adsensePubId = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID || 'ca-pub-0000000000000000';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -63,6 +64,16 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <SeoSchema />
+        {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
+          <>
+            <meta name="google-adsense-account" content={adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`} />
+            <script
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`}`}
+              crossOrigin="anonymous"
+            />
+          </>
+        )}
       </head>
       <body className="bg-dark-bg text-slate-100 min-h-screen antialiased">
         {children}

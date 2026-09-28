@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { CITIES_DATA, ISP_DATA } from '@/lib/ispData';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speednethub.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speed-net.online';
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${baseUrl}`, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
@@ -17,6 +17,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/tools/youtube-inspector`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/tools/wfh-stability-score`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/background-monitor`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${baseUrl}/privacy-policy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/terms-of-service`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
   ];
 
   // Programmatic ISP City Routes (e.g. /isp/chicago/comcast-xfinity-review-real-speeds)

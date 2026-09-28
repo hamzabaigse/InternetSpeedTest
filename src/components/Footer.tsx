@@ -59,7 +59,8 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-slate-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-300 gap-3">
           <div>© {new Date().getFullYear()} SpeedNetHub. All rights reserved. Designed for maximum ad viewability &amp; network transparency.</div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
+            <Link href="/about" className="py-1 text-slate-300 hover:text-cyan-400 transition">About &amp; Contact</Link>
             <Link href="/privacy-policy" className="py-1 text-slate-300 hover:text-cyan-400 transition">Privacy Policy</Link>
             <Link href="/terms-of-service" className="py-1 text-slate-300 hover:text-cyan-400 transition">Terms of Service</Link>
             <Link href="/isp" className="py-1 text-slate-300 hover:text-cyan-400 transition">ISP Directory</Link>
