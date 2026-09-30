@@ -1,3 +1,4 @@
+import React from 'react';
 import Script from 'next/script';
 import type { Metadata } from 'next';
 import './globals.css';
@@ -78,6 +79,11 @@ export default function RootLayout({
         <SeoSchema />
         <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+        <script
+          async
+          custom-element="amp-auto-ads"
+          src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js"
+        />
         {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
           <>
             <meta name="google-adsense-account" content={adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`} />
@@ -90,6 +96,12 @@ export default function RootLayout({
         )}
       </head>
       <body className="bg-dark-bg text-slate-100 min-h-screen antialiased">
+        {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
+          React.createElement('amp-auto-ads', {
+            type: 'adsense',
+            'data-ad-client': adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`,
+          })
+        )}
         {children}
       </body>
     </html>
