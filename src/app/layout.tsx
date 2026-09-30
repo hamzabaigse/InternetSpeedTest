@@ -1,6 +1,7 @@
 import React from 'react';
 import Script from 'next/script';
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 import { SeoSchema } from '@/components/SeoSchema';
 
@@ -103,6 +104,7 @@ export default function RootLayout({
           })
         )}
         {children}
+        <Analytics />
       </body>
     </html>
   );
