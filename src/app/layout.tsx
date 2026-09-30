@@ -62,6 +62,9 @@ export const metadata: Metadata = {
     title: 'SpeedNetHub — Free Network Speed Test & ISP Intelligence Hub',
     description: 'Measures download/upload speeds in Mbps and MB/s, YouTube 4K buffer rate, bufferbloat latency spikes, and game datacenters.',
   },
+  verification: {
+    google: 'googleefabeaa442929fd0',
+  },
 };
 
 export default function RootLayout({
