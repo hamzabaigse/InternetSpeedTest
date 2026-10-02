@@ -4,9 +4,9 @@ import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { SeoSchema } from '@/components/SeoSchema';
+import EzoicRouteHandler from '@/components/EzoicRouteHandler';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://speed-net.online';
-const adsensePubId = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID || 'ca-pub-1967995859234566';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -78,31 +78,25 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <SeoSchema />
-        <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
-        <script
-          async
-          custom-element="amp-auto-ads"
-          src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js"
+        <link rel="preconnect" href="https://www.ezojs.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://ezoicanalytics.com" crossOrigin="anonymous" />
+        <Script
+          id="ezoic-cmp"
+          src="https://cmp.gatekeeperconsent.com/min.js"
+          strategy="beforeInteractive"
+          data-cfasync="false"
         />
-        {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
-          <>
-            <meta name="google-adsense-account" content={adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`} />
-            <script
-              async
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`}`}
-              crossOrigin="anonymous"
-            />
-          </>
-        )}
+        <Script
+          id="ezoic-cmp-2"
+          src="https://the.gatekeeperconsent.com/cmp.min.js"
+          strategy="beforeInteractive"
+          data-cfasync="false"
+        />
+        <script async src="//www.ezojs.com/ezoic/sa.min.js" />
+        <script async src="//ezoicanalytics.com/analytics.js" />
       </head>
       <body className="bg-dark-bg text-slate-100 min-h-screen antialiased">
-        {adsensePubId && adsensePubId !== 'ca-pub-0000000000000000' && (
-          React.createElement('amp-auto-ads', {
-            type: 'adsense',
-            'data-ad-client': adsensePubId.startsWith('ca-') ? adsensePubId : `ca-${adsensePubId}`,
-          })
-        )}
+        <EzoicRouteHandler />
         {children}
         <Analytics />
       </body>

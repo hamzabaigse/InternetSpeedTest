@@ -1,3 +1,3 @@
-# Google AdSense ads.txt for speed-net.online
+# Ezoic Ads.txt setup for speed-net.online
+# Automatically redirected and managed via https://srv.adstxtmanager.com/19390/speed-net.online
 google.com, pub-1967995859234566, DIRECT, f08c47fec0942fa0
-
